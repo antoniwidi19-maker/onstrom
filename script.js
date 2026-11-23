@@ -43,21 +43,20 @@ precision highp float;
 #else
 precision mediump float;
 #endif
-uniform vec2 uRes;uniform float uRot,uTime;uniform vec3 uSun;
+uniform vec2 uRes;uniform float uRot,uTime,uTilt;uniform vec3 uSun,uRim;
 float hash(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
 float noise(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);
   return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),
              mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}
-float fbm(vec3 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.02+vec3(5.2,1.3,8.1);a*=.5;}return v;}
+float fbm4(vec3 p){float v=0.,a=.5;for(int i=0;i<4;i++){v+=a*noise(p);p=p*2.02+vec3(5.2,1.3,8.1);a*=.5;}return v;}
+float fbm3(vec3 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*noise(p);p=p*2.02+vec3(5.2,1.3,8.1);a*=.5;}return v;}
 float H(vec3 p){
-  float c=fbm(p*1.6),d=fbm(p*5.+c*2.);
-  float n=noise(p*14.);
-  float ring=exp(-pow((n-.78)16.,2.)).028-smoothstep(.78,.92,n)*.03; // kawah
-  return c*.55+d*.45+ring;
+  float c=fbm4(p*1.6),d=fbm3(p*5.+c*2.),n=noise(p*14.),k=(n-.78)*16.;
+  return c*.55+d*.45+exp(-k*k).028-smoothstep(.78,.92,n).03;
 }
 vec3 rx(vec3 v,float a){float c=cos(a),s=sin(a);return vec3(v.x,c*v.y-s*v.z,s*v.y+c*v.z);}
 vec3 ry(vec3 v,float a){float c=cos(a),s=sin(a);return vec3(c*v.x+s*v.z,v.y,-s*v.x+c*v.z);}
-vec3 T(vec3 v){return ry(rx(v,.44),uRot);} // kemiringan sumbu + rotasi
+vec3 T(vec3 v){return ry(rx(v,uTilt),uRot);} // kemiringan sumbu + rotasi
 void main(){
   vec2 p=(gl_FragCoord.xy-.5*uRes)/(.5*uRes.y);
   float R=.74,r=length(p)/R;
@@ -66,31 +65,35 @@ void main(){
   if(r<1.){
     vec3 n=vec3(p/R,sqrt(1.-r*r));
     vec3 q=T(n),s=T(sun);
-    float e=.012,h=H(q);
+    float c=fbm4(q*1.6),d=fbm3(q*5.+c*2.),n0=noise(q*14.),k0=(n0-.78)*16.;
+    float e=.012,h=c*.55+d*.45+exp(-k0*k0).028-smoothstep(.78,.92,n0).03;
     vec3 g=vec3(H(q+vec3(e,0,0))-h,H(q+vec3(0,e,0))-h,H(q+vec3(0,0,e))-h)/e;
     g-=dot(g,q)*q;
     vec3 N=normalize(q-g*.2);
     float dif=max(dot(N,s),0.)*smoothstep(-.08,.35,dot(q,s));
-    float c=fbm(q*1.6),d=fbm(q*5.+c*2.);
     vec3 alb=mix(vec3(.60,.25,.12),vec3(.80,.47,.26),smoothstep(.3,.7,d));
     alb=mix(alb,vec3(.90,.66,.45),smoothstep(.55,.8,c)*.7);
     alb=mix(alb,vec3(.17,.10,.09),(1.-smoothstep(.38,.52,c))*.85);
-    float lat=abs(q.y)+(fbm(q*6.)-.5)*.12;
+    float lat=abs(q.y)+(fbm3(q*6.)-.5)*.12;
     alb=mix(alb,vec3(.93,.95,.98),smoothstep(.86,.9,lat));
     float cl=noise(q*vec3(3.,10.,3.)+vec3(uTime*.03,0.,0.))noise(q*vec3(7.,18.,7.)-vec3(uTime.02,0.,0.));
     alb=mix(alb,vec3(1.),smoothstep(.25,.5,cl).22(.4+lat));
     inCol=alb*(dif*vec3(1.,.93,.85)*1.3+vec3(.014,.009,.012));
     float fr=pow(1.-n.z,3.),lit=clamp(dot(n,sun)*.7+.3,0.,1.);
     inCol+=vec3(1.,.55,.30)fr*lit.55;
+    float back=pow(max(dot(normalize(n.xy+1e-5),-normalize(sun.xy)),0.),2.);
+    inCol+=uRim*fr*back*.9;
     aIn=1.-smoothstep(.985,1.,r);
   }
   float gA=exp(-max(r-1.,0.)7.)*clamp(dot(normalize(p+1e-5),sun.xy).8+.35,0.,1.)*.5;
-  gl_FragColor=vec4(inCol*aIn+vec3(1.,.5,.28)gA(1.-aIn),aIn+gA*(1.-aIn));
+  float gB=exp(-max(r-1.,0.)8.)*clamp(dot(normalize(p+1e-5),-sun.xy).8+.3,0.,1.)*.4;
+  gl_FragColor=vec4(inCol*aIn+(vec3(1.,.5,.28)gA+uRim*gB)(1.-aIn),aIn+(gA+gB)*(1.-aIn));
 }`;
 
-var cv=$("#cv"),pw=$("#pw"),gl=null,U={},W=0;
+var cv=$("#cv"),pw=$("#pw"),gl=null,U={},W=0,qmul=1,ema=.016,nf=0,buf=new Uint8Array(4);
 function mk(type,src){var o=gl.createShader(type);gl.shaderSource(o,src);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS)){console.error(gl.getShaderInfoLog(o));return null}return o}
 try{gl=cv.getContext("webgl",{alpha:true,premultipliedAlpha:true,antialias:false})}catch(e){}
+if(gl){var pf=gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER,gl.HIGH_FLOAT);if(!pf||!pf.precision)gl=null}
 if(gl){
   var vs=mk(gl.VERTEX_SHADER,VS),fs=mk(gl.FRAGMENT_SHADER,FS),pr=null;
   if(vs&&fs){pr=gl.createProgram();gl.attachShader(pr,vs);gl.attachShader(pr,fs);gl.linkProgram(pr)}
@@ -98,30 +101,36 @@ if(gl){
     gl.useProgram(pr);
     var bf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,bf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
     var loc=gl.getAttribLocation(pr,"a");gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
-    ["uRes","uRot","uTime","uSun"].forEach(function(n){U[n]=gl.getUniformLocation(pr,n)});
+    ["uRes","uRot","uTime","uTilt","uSun","uRim"].forEach(function(n){U[n]=gl.getUniformLocation(pr,n)});
   }else gl=null;
 }
-if(!gl)pw.classList.add("nogl");
+function fallback(){gl=null;pw.classList.add("nogl")}
+if(!gl)fallback();
+else cv.addEventListener("webglcontextlost",function(e){e.preventDefault();fallback()});
 
 /* bulan yang mengorbit */
 var moons=[{el:$("#m1"),a:.56,b:.15,sp:.6,size:.05,ph:0,tl:-.32},{el:$("#m2"),a:.74,b:.22,sp:.3,size:.034,ph:2.4,tl:-.18}];
 function layout(){
-  W=pw.offsetWidth;var k=Math.min(DPR,narrow()?1.25:1.5);
+  W=pw.offsetWidth;var k=Math.min(DPR,narrow()?1:1.4)*qmul;
   cv.width=cv.height=Math.max(2,Math.round(W*k));
   moons.forEach(function(m){m.px=m.size*W;m.el.style.width=m.el.style.height=m.px+"px"});
 }
 
 /* ================= SECTION, ANGKA, POSISI PLANET ================= */
 var secs=qa("section"),done=[],cur=secs[0];
+var rim=[1,.42,.17],rimT=[1,.42,.17],tilt=.44,tiltT=.44;
+function hex(h){return [parseInt(h.substr(1,2),16)/255,parseInt(h.substr(3,2),16)/255,parseInt(h.substr(5,2),16)/255]}
 function place(sec){
   cur=sec;var x=+sec.dataset.x,s=sec.dataset.s||1;
+  if(sec.dataset.c){rimT=hex(sec.dataset.c);document.documentElement.style.setProperty("--acc",sec.dataset.c)}
+  tiltT=+(sec.dataset.t||.44);
   pw.style.setProperty("--x",narrow()?"0px":(x*24)+"vw");pw.style.setProperty("--s",s);
 }
 function count(sec){
   qa(".c").forEach(function(el){
     if(!sec.contains(el))return;
     var to=+el.dataset.to,t0=null;
-    (function f(t){if(!t0)t0=t;var k=Math.min(1,(t-t0)/1700),e=1-Math.pow(1-k,3);el.textContent=String(Math.round(to*e)).replace("-","−");if(k<1)requestAnimationFrame(f)})(performance.now());
+    (function f(t){if(!t0)t0=t;var k=Math.min(1,(t-t0)/1700),e=1-Math.pow(1-k,3);var v=Math.round(to*e+(k<1?(Math.random()-.5)Math.abs(to).3*(1-k):0));el.textContent=String(v).replace("-","−");if(k<1)requestAnimationFrame(f)})(performance.now());
   });
 }
 var io=new IntersectionObserver(function(es){
@@ -137,12 +146,17 @@ function frame(ms){
   var t=ms/1000,dt=Math.min(.05,t-last);last=t;
   var diff=window.scrollY-sy;sy+=diff*.08;mx+=(tmx-mx).04;my+=(tmy-my).04;
   rot+=reduce?0:dt*(.06+Math.min(Math.abs(diff),240)*.0014);   // makin cepat saat scroll
+  for(var q=0;q<3;q++)rim[q]+=(rimT[q]-rim[q]).05;tilt+=(tiltT-tilt).04;
   drawSky(t,dt,sy);
   if(gl){
     gl.viewport(0,0,cv.width,cv.height);
-    gl.uniform2f(U.uRes,cv.width,cv.height);gl.uniform1f(U.uRot,rot);gl.uniform1f(U.uTime,t);
+    gl.uniform2f(U.uRes,cv.width,cv.height);gl.uniform1f(U.uRot,rot);gl.uniform1f(U.uTime,t);gl.uniform1f(U.uTilt,tilt);gl.uniform3f(U.uRim,rim[0],rim[1],rim[2]);
     gl.uniform3f(U.uSun,-.75+mx*.5,.35-my*.4,.55);
     gl.drawArrays(gl.TRIANGLES,0,3);
+    nf++;
+    if(nf===8){gl.readPixels(cv.width>>1,cv.height>>1,1,1,gl.RGBA,gl.UNSIGNED_BYTE,buf);if(buf[3]<30)fallback()}  // jaga-jaga kalau GPU gagal gambar
+    ema=ema*.95+Math.min(.1,dt)*.05;
+    if(nf%45===0&&ema>.034&&qmul>.55){qmul*=.8;layout()}                       // turunkan resolusi kalau berat
   }
   var f=narrow()?.78:1;
   moons.forEach(function(m){
@@ -158,4 +172,4 @@ function frame(ms){
   requestAnimationFrame(frame);
 }
 sizeSky();layout();place(secs[0]);requestAnimationFrame(frame);
-})()
+})();
