@@ -1,52 +1,109 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>MARS — Planet Merah</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="Informasi tentang Mars: orbit, suhu, gravitasi, Olympus Mons, dan bulan-bulannya." />
+  <meta name="theme-color" content="#05060a" />
+  <title>MARS — Planet Merah</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400..800&family=Space+Mono:wght@400;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<canvas id="sky"></canvas>
-<nav><b>MARS</b><div class="l"><span>Waktu</span><span>Medan</span><span>Iklim</span></div><button>Pelajari</button></nav>
+  <canvas id="sky" aria-hidden="true"></canvas>
 
-<div class="pw" id="pw"><div class="pf">
-  <canvas id="cv"></canvas><i class="moon" id="m1"></i><i class="moon" id="m2"></i>
-</div></div>
+  <nav class="top">
+    <a class="logo" href="#top">MARS</a>
+    <div class="l">
+      <a href="#tahun">Waktu</a>
+      <a href="#tinggi">Medan</a>
+      <a href="#dingin">Iklim</a>
+    </div>
+    <a class="btn btn-sm" href="#tahun">Pelajari</a>
+  </nav>
 
-<section class="hero in" data-x="0" data-s="1.05">
-  <div class="ghost">MARS</div>
-  <div class="txt"><h1>Planet Merah</h1><p>Empat planet dari Matahari, 225 juta km jauhnya. Gulir untuk angka-angkanya.</p><div class="hint"><i></i>Gulir</div></div>
-</section>
+  <div class="pw" id="pw" aria-hidden="true">
+    <div class="pf">
+      <canvas id="cv"></canvas>
+      <i class="moon" id="m1"></i>
+      <i class="moon" id="m2"></i>
+    </div>
+  </div>
 
-<section data-x="-1" class="r">
-  <div class="ghost">TAHUN</div>
-  <div class="txt"><span class="num"><span class="c" data-to="687">0</span><sup>hari</sup></span><h2>Satu tahun, hampir dua kali lipat.</h2><p>Mars butuh 687 hari Bumi untuk mengelilingi Matahari. Satu hari di sana (sol) hanya 24 jam 39 menit.</p></div>
-</section>
+  <!-- data-split: JS memecah judul per kata/huruf untuk animasi -->
+  <!-- data-x: posisi planet (-1 kiri, 0 tengah, 1 kanan), data-s: ukuran planet -->
 
-<section data-x="1">
-  <div class="ghost">TINGGI</div>
-  <div class="txt"><span class="num"><span class="c" data-to="21">0</span><sup>km</sup></span><h2>Olympus Mons, gunung tertinggi di tata surya.</h2><p>Hampir tiga kali tinggi Everest, dan selebar negara bagian Arizona.</p></div>
-</section>
+  <section class="hero in" id="top" data-x="0" data-s="1.05">
+    <div class="ghost" aria-hidden="true">MARS</div>
+    <div class="txt">
+      <p class="kicker">Planet ke-4 dari Matahari</p>
+      <h1 data-split>Planet Merah</h1>
+      <p>Sekitar 228 juta km dari Matahari. Gulir untuk melihat angka-angkanya.</p>
+      <div class="hint"><i></i>Gulir</div>
+    </div>
+  </section>
 
-<section data-x="-1" class="r">
-  <div class="ghost">DINGIN</div>
-  <div class="txt"><span class="num"><span class="c" data-to="-63">0</span><sup>°C</sup></span><h2>Rata-rata suhu, turun sampai −140.</h2><p>Atmosfernya 95% karbon dioksida dan sangat tipis, jadi hampir tidak menahan panas.</p></div>
-</section>
+  <section class="r" id="tahun" data-x="-1">
+    <div class="ghost" aria-hidden="true">TAHUN</div>
+    <div class="txt">
+      <span class="num"><span class="c" data-to="687">0</span><sup>hari</sup></span>
+      <h2 data-split>Satu tahun, hampir dua kali lipat.</h2>
+      <p>Mars butuh 687 hari Bumi untuk mengelilingi Matahari. Satu hari di sana (sol) hanya 24 jam 39 menit.</p>
+    </div>
+  </section>
 
-<section data-x="1">
-  <div class="ghost">RINGAN</div>
-  <div class="txt"><span class="num"><span class="c" data-to="38">0</span><sup>%</sup></span><h2>Gravitasi Bumi. Lompat jauh lebih tinggi.</h2>
-    <div class="bars"><div>BUMI<div class="bar"><i style="--w:100%"></i></div></div><div>MARS<div class="bar"><i style="--w:38%"></i></div></div></div></div>
-</section>
+  <section id="tinggi" data-x="1">
+    <div class="ghost" aria-hidden="true">TINGGI</div>
+    <div class="txt">
+      <span class="num"><span class="c" data-to="22">0</span><sup>km</sup></span>
+      <h2 data-split>Olympus Mons, gunung tertinggi di tata surya.</h2>
+      <p>Sekitar 2,5 kali tinggi Everest, dengan lebar dasar kira-kira sebesar negara bagian Arizona.</p>
+    </div>
+  </section>
 
-<section class="end" data-x="0" data-s="0.82">
-  <div class="ghost">MARS</div>
-  <div class="txt"><h2>Dua bulan kecil, satu planet.</h2><p>Fobos dan Deimos mengorbit Mars, dan rover masih menjelajah permukaannya hari ini.</p>
-    <div class="cards"><div class="card"><b>Fobos</b>Bulan terbesar, ±22 km</div><div class="card"><b>Deimos</b>Bulan kecil, ±12 km</div><div class="card"><b>Rover</b>Masih aktif</div></div>
-    <button>Jelajahi lebih lanjut</button></div>
-</section>
+  <section class="r" id="dingin" data-x="-1">
+    <div class="ghost" aria-hidden="true">DINGIN</div>
+    <div class="txt">
+      <span class="num"><span class="c" data-to="-63">0</span><sup>°C</sup></span>
+      <h2 data-split>Rata-rata suhu, turun sampai −140.</h2>
+      <p>Atmosfernya 95% karbon dioksida dan sangat tipis, jadi hampir tidak menahan panas.</p>
+    </div>
+  </section>
 
-<script src="script.js"></script>
+  <section id="ringan" data-x="1">
+    <div class="ghost" aria-hidden="true">RINGAN</div>
+    <div class="txt">
+      <span class="num"><span class="c" data-to="38">0</span><sup>%</sup></span>
+      <h2 data-split>Sekitar 38% gravitasi Bumi.</h2>
+      <p>Dengan tenaga yang sama, lompatanmu di Mars bisa sekitar 2,6 kali lebih tinggi.</p>
+      <div class="bars">
+        <div>BUMI<div class="bar"><i style="--w:100%"></i></div></div>
+        <div>MARS<div class="bar"><i style="--w:38%"></i></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="end" id="akhir" data-x="0" data-s="0.82">
+    <div class="ghost" aria-hidden="true">MARS</div>
+    <div class="txt">
+      <h2 data-split>Dua bulan kecil, satu planet.</h2>
+      <p>Fobos dan Deimos mengorbit Mars, dan rover masih menjelajah permukaannya hari ini.</p>
+      <div class="cards">
+        <div class="card"><b>Fobos</b>Bulan terbesar, ±22 km</div>
+        <div class="card"><b>Deimos</b>Bulan kecil, ±12 km</div>
+        <div class="card"><b>Rover</b>Masih aktif</div>
+      </div>
+      <a class="btn" href="https://science.nasa.gov/mars/" target="_blank" rel="noopener">Jelajahi lebih lanjut</a>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p>Data: NASA Mars Fact Sheet dan NASA Science. Angka dibulatkan agar mudah dibaca.</p>
+  </footer>
+
+  <script src="script.js"></script>
 </body>
 </html>
