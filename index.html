@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="description" content="Informasi tentang Mars: orbit, suhu, gravitasi, Olympus Mons, dan bulan-bulannya." />
-  <meta name="theme-color" content="#05060a" />
+  <meta name="description" content="Informasi tentang Mars: data dasar, permukaan, sejarah misi, dan fakta menarik." />
+  <meta name="theme-color" content="#07060a" />
   <title>MARS — Planet Merah</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -18,11 +18,12 @@
   <nav class="top">
     <a class="logo" href="#top">MARS</a>
     <div class="l">
-      <a href="#tahun">Waktu</a>
-      <a href="#tinggi">Medan</a>
-      <a href="#dingin">Iklim</a>
+      <a href="#ringkas">Ringkas</a>
+      <a href="#permukaan">Permukaan</a>
+      <a href="#sejarah">Sejarah</a>
+      <a href="#misi">Misi</a>
     </div>
-    <a class="btn btn-sm" href="#tahun">Pelajari</a>
+    <a class="btn btn-sm" href="#menarik">Fakta</a>
   </nav>
 
   <div class="pw" id="pw" aria-hidden="true">
@@ -33,75 +34,110 @@
     </div>
   </div>
 
-  <!-- data-split: JS memecah judul per kata/huruf untuk animasi -->
-  <!-- data-x: posisi planet (-1 kiri, 0 tengah, 1 kanan), data-s: ukuran planet -->
-
+  <!-- 1. HERO -->
   <section class="hero in" id="top" data-x="0" data-s="1.05">
     <div class="ghost" aria-hidden="true">MARS</div>
     <div class="txt">
       <p class="kicker">Planet ke-4 dari Matahari</p>
       <h1 data-split>Planet Merah</h1>
-      <p>Sekitar 228 juta km dari Matahari. Gulir untuk melihat angka-angkanya.</p>
+      <p>Sekitar 228 juta km dari Matahari. Permukaannya berwarna merah karena debu yang kaya besi oksida.</p>
       <div class="hint"><i></i>Gulir</div>
     </div>
   </section>
 
-  <section class="r" id="tahun" data-x="-1">
-    <div class="ghost" aria-hidden="true">TAHUN</div>
+  <!-- 2. QUICK FACTS -->
+  <section class="r" id="ringkas" data-x="-1">
+    <div class="ghost" aria-hidden="true">DATA</div>
     <div class="txt">
-      <span class="num"><span class="c" data-to="687">0</span><sup>hari</sup></span>
-      <h2 data-split>Satu tahun, hampir dua kali lipat.</h2>
-      <p>Mars butuh 687 hari Bumi untuk mengelilingi Matahari. Satu hari di sana (sol) hanya 24 jam 39 menit.</p>
-    </div>
-  </section>
-
-  <section id="tinggi" data-x="1">
-    <div class="ghost" aria-hidden="true">TINGGI</div>
-    <div class="txt">
-      <span class="num"><span class="c" data-to="22">0</span><sup>km</sup></span>
-      <h2 data-split>Olympus Mons, gunung tertinggi di tata surya.</h2>
-      <p>Sekitar 2,5 kali tinggi Everest, dengan lebar dasar kira-kira sebesar negara bagian Arizona.</p>
-    </div>
-  </section>
-
-  <section class="r" id="dingin" data-x="-1">
-    <div class="ghost" aria-hidden="true">DINGIN</div>
-    <div class="txt">
-      <span class="num"><span class="c" data-to="-63">0</span><sup>°C</sup></span>
-      <h2 data-split>Rata-rata suhu, turun sampai −140.</h2>
-      <p>Atmosfernya 95% karbon dioksida dan sangat tipis, jadi hampir tidak menahan panas.</p>
-    </div>
-  </section>
-
-  <section id="ringan" data-x="1">
-    <div class="ghost" aria-hidden="true">RINGAN</div>
-    <div class="txt">
-      <span class="num"><span class="c" data-to="38">0</span><sup>%</sup></span>
-      <h2 data-split>Sekitar 38% gravitasi Bumi.</h2>
-      <p>Dengan tenaga yang sama, lompatanmu di Mars bisa sekitar 2,6 kali lebih tinggi.</p>
+      <p class="kicker">Quick Facts</p>
+      <h2 data-split>Angka dasar Mars.</h2>
+      <div class="cards">
+        <div class="card"><b>6.779 km</b>Diameter</div>
+        <div class="card"><b>11%</b>Massa dibanding Bumi</div>
+        <div class="card"><b>3,71 m/s²</b>Gravitasi</div>
+        <div class="card"><b>24 j 39 m</b>Satu hari (sol)</div>
+        <div class="card"><b>−63°C</b>Suhu rata-rata</div>
+        <div class="card"><b>2 bulan</b>Fobos dan Deimos</div>
+      </div>
       <div class="bars">
         <div>BUMI<div class="bar"><i style="--w:100%"></i></div></div>
-        <div>MARS<div class="bar"><i style="--w:38%"></i></div></div>
+        <div>MARS<div class="bar"><i style="--w:53%"></i></div></div>
       </div>
     </div>
   </section>
 
-  <section class="end" id="akhir" data-x="0" data-s="0.82">
-    <div class="ghost" aria-hidden="true">MARS</div>
+  <!-- 3. OVERVIEW -->
+  <section id="ikhtisar" data-x="1">
+    <div class="ghost" aria-hidden="true">ATMOSFER</div>
     <div class="txt">
-      <h2 data-split>Dua bulan kecil, satu planet.</h2>
-      <p>Fobos dan Deimos mengorbit Mars, dan rover masih menjelajah permukaannya hari ini.</p>
+      <p class="kicker">Overview</p>
+      <span class="num"><span class="c" data-to="95">0</span><sup>% CO₂</sup></span>
+      <h2 data-split>Planet berbatu dengan atmosfer yang sangat tipis.</h2>
+      <p>Mars sekitar setengah diameter Bumi. Tekanan udaranya hanya sekitar 0,6% dari Bumi, sehingga air cair sulit bertahan di permukaan. Sumbunya miring sekitar 25°, mirip Bumi, jadi Mars juga punya musim.</p>
+    </div>
+  </section>
+
+  <!-- 4. SURFACE & STRUCTURE -->
+  <section class="r" id="permukaan" data-x="-1">
+    <div class="ghost" aria-hidden="true">KERAK</div>
+    <div class="txt">
+      <p class="kicker">Surface &amp; Structure</p>
+      <h2 data-split>Kerak, mantel, dan inti yang masih diteliti.</h2>
+      <ol class="tl">
+        <li><b>Kerak</b>Lapisan terluar, tebal puluhan kilometer. Permukaannya penuh kawah, gunung berapi purba, dan lembah.</li>
+        <li><b>Mantel</b>Lapisan berbatu di bawah kerak. Getaran gempa dari InSight membantu para ilmuwan memetakannya.</li>
+        <li><b>Inti</b>Besi dan nikel dengan radius sekitar 1.800 km. Inti luarnya diperkirakan cair.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 5. HISTORY -->
+  <section id="sejarah" data-x="1">
+    <div class="ghost" aria-hidden="true">SEJARAH</div>
+    <div class="txt">
+      <p class="kicker">History</p>
+      <span class="num"><span class="c" data-to="1659">0</span><sup>tahun</sup></span>
+      <h2 data-split>Dari sketsa awal sampai robot di permukaan.</h2>
+      <ol class="tl">
+        <li><b>1659</b>Christiaan Huygens membuat salah satu gambar Mars paling awal.</li>
+        <li><b>1877</b>Giovanni Schiaparelli mengamati garis di Mars. Garis itu kemudian disalahartikan sebagai kanal buatan.</li>
+        <li><b>1965</b>Mariner 4 mengirim foto Mars dari jarak dekat.</li>
+        <li><b>1976</b>Viking 1 dan Viking 2 mendarat dan mengirim foto permukaan.</li>
+        <li><b>1997</b>Sojourner menjadi rover pertama di Mars.</li>
+        <li><b>2012</b>Curiosity mendarat di Gale Crater dan masih meneliti bebatuannya.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 6. EXPLORATION -->
+  <section class="r" id="misi" data-x="-1">
+    <div class="ghost" aria-hidden="true">MISI</div>
+    <div class="txt">
+      <p class="kicker">Exploration</p>
+      <span class="num"><span class="c" data-to="72">0</span><sup>penerbangan</sup></span>
+      <h2 data-split>Rover, helikopter, dan penemuan terbaru.</h2>
+      <p>Perseverance mengumpulkan sampel batu untuk nanti dibawa ke Bumi. Ingenuity, helikopter kecil pertama yang terbang di planet lain, menyelesaikan 72 penerbangan sebelum berhenti pada 2024.</p>
+      <p>InSight mencatat lebih dari seribu getaran tanah sampai misinya berakhir pada 2022.</p>
+    </div>
+  </section>
+
+  <!-- 7. INTERESTING FACTS -->
+  <section class="end" id="menarik" data-x="0" data-s="0.82">
+    <div class="ghost" aria-hidden="true">FAKTA</div>
+    <div class="txt">
+      <p class="kicker">Interesting Facts</p>
+      <h2 data-split>Fakta yang sulit dipercaya.</h2>
       <div class="cards">
-        <div class="card"><b>Fobos</b>Bulan terbesar, ±22 km</div>
-        <div class="card"><b>Deimos</b>Bulan kecil, ±12 km</div>
-        <div class="card"><b>Rover</b>Masih aktif</div>
+        <div class="card"><b>Olympus Mons</b>Gunung tertinggi di tata surya, sekitar 2,5 kali Everest.</div>
+        <div class="card"><b>Valles Marineris</b>Lembah sepanjang sekitar 4.000 km, hampir selebar Amerika Serikat.</div>
+        <div class="card"><b>Sinyal</b>Dari Mars ke Bumi butuh 3 sampai 22 menit, tergantung jarak.</div>
       </div>
-      <a class="btn" href="https://science.nasa.gov/mars/" target="_blank" rel="noopener">Jelajahi lebih lanjut</a>
+      <a class="btn" href="https://science.nasa.gov/mars/" target="_blank" rel="noopener">Pelajari dari NASA</a>
     </div>
   </section>
 
   <footer class="foot">
-    <p>Data: NASA Mars Fact Sheet dan NASA Science. Angka dibulatkan agar mudah dibaca.</p>
+    <p>Data: NASA Mars Fact Sheet dan NASA Science. Angka dibulatkan. Cek ulang status misi sebelum dipakai.</p>
   </footer>
 
   <script src="script.js"></script>
