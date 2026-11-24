@@ -1,5 +1,5 @@
 /* =========================================================
-   MARS — style.css (revisi, cocok dengan index.html baru)
+   MARS — style.css (lengkap, cocok dengan index.html baru)
    ========================================================= */
 
 /* Warna aksen yang bisa dianimasikan lewat JS dengan transisi halus */
@@ -385,7 +385,7 @@ p {
 }
 .in .bar i { width: var(--w); }
 
-/* ---------- Kartu bulan ---------- */
+/* ---------- Kartu ---------- */
 .cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -439,6 +439,29 @@ p {
   font-size: 10px;
   letter-spacing: 0.12em;
   color: var(--mute);
+}
+
+/* ---------- Daftar garis waktu & lapisan ---------- */
+.tl {
+  list-style: none;
+  margin-top: 22px;
+  padding-left: 18px;
+  border-left: 2px solid var(--acc);
+  display: grid;
+  gap: 14px;
+}
+.tl li {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--mute);
+}
+.tl b {
+  display: block;
+  margin-bottom: 2px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: var(--fg);
 }
 
 /* ---------- Responsif ---------- */
