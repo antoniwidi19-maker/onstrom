@@ -1,13 +1,14 @@
 /* =========================================================
-   MARS — mars-3d.js
-   Planet Mars 3D memakai Three.js (bola sungguhan + shader).
-   - Diputar dengan seret mouse atau sentuhan, dengan inersia
-   - Zoom: Ctrl + scroll (desktop), cubit (HP), atau tombol + dan −
-   - HP: kawah tetap tampil, bayangan permukaan dimatikan agar ringan
+   MARS — mars-3d.js (versi tekstur foto NASA)
+   - Memakai mars-texture.jpg sebagai permukaan planet
+   - Jika gambar tidak ada, pakai permukaan prosedural
+   - Diputar dengan seret, zoom dengan Ctrl+scroll, cubit, atau tombol + dan −
    - Jika WebGL / Three.js tidak tersedia: pakai cadangan CSS (.nogl)
    ========================================================= */
 (function () {
   "use strict";
+
+  var TEXTURE_URL = "mars-texture.jpg";
 
   var pw = document.getElementById("pw");
   var cv = document.getElementById("cv");
@@ -38,6 +39,8 @@
   var FS_PLANET = `
 uniform float uTime;
 uniform float uLow;
+uniform float uHasMap;
+uniform sampler2D uMap;
 uniform vec3 uSunObj;
 uniform vec3 uSunView;
 uniform vec3 uRim;
@@ -114,53 +117,58 @@ void main() {
   vec3 q = normalize(vPos);
   vec3 sunO = normalize(uSunObj);
 
-  // bayangan permukaan dari ketinggian (dimatikan di HP agar ringan)
+  // bayangan dari relief kecil (hanya di desktop)
   vec3 N = q;
   if (uLow < 0.5) {
     float e = 0.012;
     float h0 = H(q);
     vec3 g = vec3(H(q + vec3(e,0.0,0.0)) - h0, H(q + vec3(0.0,e,0.0)) - h0, H(q + vec3(0.0,0.0,e)) - h0) / e;
     g -= dot(g, q) * q;
-    N = normalize(q - g * 0.2);
+    N = normalize(q - g * 0.12);
   }
 
-  float c = fbm4(q * 1.6);
-  float d = fbm3(q * 5.0 + c * 2.0);
-
-  // warna permukaan: oker terang, oker kemerahan, basalt gelap, kutub es
-  vec3 rust = vec3(0.60, 0.28, 0.14);
-  vec3 bright = vec3(0.84, 0.53, 0.32);
-  vec3 dark = vec3(0.22, 0.13, 0.11);
-  vec3 ice = vec3(0.93, 0.94, 0.96);
-
-  vec3 alb = mix(rust, bright, smoothstep(0.35, 0.75, d));
-  alb = mix(alb, dark, (1.0 - smoothstep(0.38, 0.50, c)) * 0.85);
-
-  // kawah selalu aktif, termasuk di HP
-  vec2 cr = craters(q * 6.0);
-  alb *= 1.0 - 0.45 * cr.x;
-  alb += 0.10 * cr.y;
-
-  alb *= 0.92 + 0.16 * noise(q * 30.0);
-
-  float lat = abs(q.y) + (fbm3(q * 6.0) - 0.5) * 0.12;
-  alb = mix(alb, ice, smoothstep(0.84, 0.92, lat));
-
-  if (uLow < 0.5) {
-    float dust = smoothstep(0.55, 0.85, fbm3(q * 2.0 + vec3(uTime * 0.01, 0.0, 0.0))) * 0.25;
-    alb = mix(alb, bright, dust);
+  vec3 alb;
+  if (uHasMap > 0.5) {
+    // peta Mars dari NASA (proyeksi equirectangular)
+    float u = atan(q.z, q.x) / 6.2831853 + 0.5;
+    float v = asin(clamp(q.y, -1.0, 1.0)) / 3.1415927 + 0.5;
+    alb = texture2D(uMap, vec2(u, v)).rgb;
+  } else {
+    // cadangan: permukaan prosedural
+    float c = fbm4(q * 1.6);
+    float d = fbm3(q * 5.0 + c * 2.0);
+    vec3 rust = vec3(0.60, 0.28, 0.14);
+    vec3 bright = vec3(0.84, 0.53, 0.32);
+    vec3 dark = vec3(0.22, 0.13, 0.11);
+    vec3 ice = vec3(0.93, 0.94, 0.96);
+    alb = mix(rust, bright, smoothstep(0.35, 0.75, d));
+    alb = mix(alb, dark, (1.0 - smoothstep(0.38, 0.50, c)) * 0.85);
+    if (uLow < 0.5) {
+      vec2 cr = craters(q * 6.0);
+      alb *= 1.0 - 0.45 * cr.x;
+      alb += 0.10 * cr.y;
+    }
+    float lat = abs(q.y) + (fbm3(q * 6.0) - 0.5) * 0.12;
+    alb = mix(alb, ice, smoothstep(0.84, 0.92, lat));
+    if (uLow < 0.5) {
+      float dust = smoothstep(0.55, 0.85, fbm3(q * 2.0 + vec3(uTime * 0.01, 0.0, 0.0))) * 0.25;
+      alb = mix(alb, bright, dust);
+    }
   }
+
+  // detail halus agar tetap tajam saat di-zoom
+  alb *= 0.94 + 0.12 * noise(q * 40.0);
 
   // pencahayaan dengan batas siang-malam yang lembut
   float term = smoothstep(-0.12, 0.25, dot(q, sunO));
   float dif = max(dot(N, sunO), 0.0) * term;
-  vec3 col = alb * (dif * vec3(1.0, 0.93, 0.85) * 1.25 + vec3(0.02, 0.012, 0.015));
+  vec3 col = alb * (dif * vec3(1.0, 0.95, 0.88) * 1.3 + vec3(0.025, 0.014, 0.018));
 
   // cahaya tipis atmosfer di tepi
   vec3 nV = normalize(vN);
   vec3 vV = normalize(vView);
   float fr = pow(max(1.0 - dot(nV, vV), 0.0), 3.0);
-  col += uRim * fr * 0.55 * (0.3 + 0.7 * max(dot(nV, uSunView), 0.0));
+  col += uRim * fr * 0.5 * (0.3 + 0.7 * max(dot(nV, uSunView), 0.0));
 
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -205,14 +213,43 @@ void main() {
   var camDist = DIST, camDistT = DIST;
   camera.position.set(0, 0, camDist);
 
+  // tekstur sementara (1 piksel) sebelum gambar Mars selesai dimuat
+  var placeholder = new THREE.DataTexture(new Uint8Array([120, 70, 40, 255]), 1, 1, THREE.RGBAFormat);
+  placeholder.needsUpdate = true;
+
   var sunWorld = new THREE.Vector3(-0.75, 0.35, 0.55).normalize();
   var uniforms = {
     uTime: { value: 0 },
     uLow: { value: mobile ? 1 : 0 },
+    uHasMap: { value: 0 },
+    uMap: { value: placeholder },
     uSunObj: { value: new THREE.Vector3() },
     uSunView: { value: new THREE.Vector3(0, 0, 1) },
     uRim: { value: new THREE.Vector3(1, 0.42, 0.17) }
   };
+
+  /* ----- Memuat tekstur Mars ----- */
+  function loadMap(url) {
+    var img = new Image();
+    img.onload = function () {
+      var maxW = mobile ? 2048 : 4096;
+      var w = Math.min(img.width, maxW);
+      var h = Math.round(img.height * (w / img.width));
+      var c = document.createElement("canvas");
+      c.width = w;
+      c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      var tex = new THREE.Texture(c);
+      tex.generateMipmaps = false;
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.needsUpdate = true;
+      uniforms.uMap.value = tex;
+      uniforms.uHasMap.value = 1;
+    };
+    img.src = url;
+  }
+  loadMap(TEXTURE_URL);
 
   var segW = mobile ? 64 : 128, segH = mobile ? 48 : 96;
   var planetMat = new THREE.ShaderMaterial({ uniforms: uniforms, vertexShader: VS, fragmentShader: FS_PLANET });
