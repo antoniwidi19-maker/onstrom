@@ -59,13 +59,13 @@
       #marsAuthButton {
         position: fixed;
         top: 17px;
-        right: 5vw;
+        right: 2vw;
         z-index: 1001;
         padding: 10px 17px;
-        border: 1px solid rgba(255,255,255,.2);
+        border: 1px solid #ff6a2b;
         border-radius: 4px;
-        background: rgba(12,10,20,.8);
-        color: #eceaf2;
+        background: #ff6a2b;
+        color: #120600;
         font: 11px monospace;
         letter-spacing: 1px;
         cursor: pointer;
