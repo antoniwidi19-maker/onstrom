@@ -1,8 +1,8 @@
 /* =========================================================
-   MARS — style.css (lengkap, cocok dengan index.html baru)
+   MARS — style.css (penyempurnaan visual luar angkasa)
+   Struktur dan isi section tidak diubah.
    ========================================================= */
 
-/* Warna aksen yang bisa dianimasikan lewat JS dengan transisi halus */
 @property --acc {
   syntax: "<color>";
   inherits: true;
@@ -12,7 +12,7 @@
 :root {
   --bg: #07060a;
   --fg: #eceaf2;
-  --mute: #8b8798;
+  --mute: #a9a5b8;
   --acc: #ff6a2b;
   --display: "Syne", "Helvetica Neue", Arial, sans-serif;
   --mono: "Space Mono", ui-monospace, Menlo, monospace;
@@ -22,7 +22,7 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-
+html { scroll-behavior: smooth; background: var(--bg); }
 body {
   background: var(--bg);
   color: var(--fg);
@@ -31,7 +31,66 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Latar bintang */
+/* ---------- Latar luar angkasa (lapisan) ---------- */
+#space {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: radial-gradient(120% 90% at 70% 15%, #0c1430 0%, #07060a 55%, #030306 100%);
+  --mx: 0;
+  --my: 0;
+}
+.neb {
+  position: absolute;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  translate: calc(var(--mx) * -40px) calc(var(--my) * -40px);
+  will-change: transform, translate;
+}
+.neb-a {
+  width: 80vmax; height: 60vmax; left: -22vmax; top: -18vmax;
+  background: radial-gradient(closest-side, rgba(40, 64, 140, 0.42), transparent 72%);
+  animation: drift 70s ease-in-out infinite alternate;
+}
+.neb-b {
+  width: 70vmax; height: 56vmax; right: -24vmax; top: 8vh;
+  background: radial-gradient(closest-side, rgba(92, 40, 132, 0.34), transparent 72%);
+  animation: drift 90s ease-in-out infinite alternate-reverse;
+}
+.neb-c {
+  width: 62vmax; height: 46vmax; left: 18vw; bottom: -26vmax;
+  background: radial-gradient(closest-side, rgba(128, 38, 44, 0.2), transparent 72%);
+  animation: drift 110s ease-in-out infinite alternate;
+}
+@keyframes drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(4vmax, -2vmax, 0) scale(1.08); }
+}
+.rays {
+  position: absolute;
+  inset: -20%;
+  opacity: 0.5;
+  mix-blend-mode: screen;
+  background: conic-gradient(from 205deg at 88% -8%,
+    transparent 0deg, rgba(255, 170, 110, 0.06) 6deg, transparent 14deg,
+    transparent 36deg, rgba(120, 150, 255, 0.05) 44deg, transparent 52deg);
+}
+.haze {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 14, 34, 0.35) 0%, transparent 35%, transparent 70%, rgba(60, 26, 30, 0.22) 100%);
+}
+.grain {
+  position: absolute;
+  inset: -50%;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
 #sky {
   position: fixed;
   inset: 0;
@@ -98,17 +157,10 @@ nav.top .l a:hover { color: var(--fg); }
   text-transform: uppercase;
   text-decoration: none;
   cursor: pointer;
-  transition: transform 0.3s, filter 0.3s;
+  transition: filter 0.3s;
 }
-.btn:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.1);
-}
-.btn-sm {
-  margin-top: 0;
-  padding: 9px 16px;
-  font-size: 10px;
-}
+.btn:hover { filter: brightness(1.1); }
+.btn-sm { margin-top: 0; padding: 9px 16px; font-size: 10px; }
 
 /* ---------- Planet ---------- */
 .pw {
@@ -116,13 +168,12 @@ nav.top .l a:hover { color: var(--fg); }
   left: 50%;
   top: 50%;
   z-index: 1;
-  width: min(86vmin, 760px);
+  width: min(90vmin, 820px);
   aspect-ratio: 1;
   pointer-events: none;
   transform: translate(calc(-50% + var(--x, 0px)), -50%) scale(var(--s, 1));
   transition: transform 1.8s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-/* Cahaya di bawah planet */
 .pw::before {
   content: "";
   position: absolute;
@@ -139,7 +190,6 @@ nav.top .l a:hover { color: var(--fg); }
 @keyframes glow {
   50% { opacity: 0.85; transform: scaleX(1.08); }
 }
-
 .pf {
   position: absolute;
   inset: 0;
@@ -149,15 +199,17 @@ nav.top .l a:hover { color: var(--fg); }
 @keyframes bob {
   50% { transform: translateY(-12px) rotate(0.8deg); }
 }
-
 #cv {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   z-index: 2;
+  pointer-events: auto;
+  touch-action: pan-y;
+  cursor: grab;
 }
-
+#cv:active { cursor: grabbing; }
 .moon {
   position: absolute;
   left: 0;
@@ -196,6 +248,35 @@ nav.top .l a:hover { color: var(--fg); }
   to { background-position: 200% 0; }
 }
 
+/* Kontrol zoom */
+.zoom {
+  position: fixed;
+  right: 18px;
+  bottom: 22px;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.zoom button {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(12, 10, 20, 0.55);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 16px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: border-color 0.3s, background 0.3s;
+}
+.zoom button:hover {
+  border-color: var(--acc);
+  background: rgba(20, 14, 28, 0.75);
+}
+
 /* ---------- Section ---------- */
 section {
   position: relative;
@@ -208,7 +289,6 @@ section {
 }
 section.r { justify-content: flex-end; }
 
-/* Teks raksasa di belakang. Pakai property translate agar transform bisa dipakai JS untuk parallax */
 .ghost {
   position: absolute;
   left: 50%;
@@ -236,9 +316,8 @@ section.r { justify-content: flex-end; }
   position: relative;
   z-index: 4;
   max-width: min(480px, 86vw);
+  text-shadow: 0 1px 18px rgba(4, 3, 8, 0.75);
 }
-
-/* Setiap elemen teks naik dan memudar saat section masuk layar (class .in) */
 .txt > * {
   opacity: 0;
   transform: translateY(36px);
@@ -252,7 +331,6 @@ section.r { justify-content: flex-end; }
 .txt > :nth-child(3) { transition-delay: 0.3s; }
 .txt > :nth-child(4) { transition-delay: 0.45s; }
 
-/* Judul dipecah per kata oleh script.js: <span class="w" style="--i:0">kata</span> */
 [data-split] .w {
   display: inline-block;
   opacity: 0;
@@ -268,10 +346,7 @@ section.r { justify-content: flex-end; }
 }
 
 /* ---------- Hero ---------- */
-.hero {
-  align-items: flex-end;
-  justify-content: center;
-}
+.hero { align-items: flex-end; justify-content: center; }
 .hero .txt {
   width: min(640px, 90vw);
   max-width: none;
@@ -295,10 +370,7 @@ section.r { justify-content: flex-end; }
   letter-spacing: -0.04em;
   margin: 0 0 16px;
 }
-.hero p {
-  max-width: 34ch;
-  margin: 0 auto;
-}
+.hero p { max-width: 34ch; margin: 0 auto; }
 .hint {
   margin-top: 26px;
   font-family: var(--mono);
@@ -323,9 +395,7 @@ section.r { justify-content: flex-end; }
 }
 
 /* ---------- Teks & angka ---------- */
-h1,
-h2 { font-family: var(--display); }
-
+h1, h2 { font-family: var(--display); }
 h2 {
   font-size: clamp(28px, 4.4vw, 54px);
   font-weight: 800;
@@ -336,14 +406,13 @@ h2 {
 p {
   font-family: var(--body);
   font-size: 16px;
-  line-height: 1.65;
+  line-height: 1.7;
   color: var(--mute);
 }
-
 .num {
   display: block;
   font-family: var(--display);
-  font-size: clamp(84px, 17vw, 210px);
+  font-size: clamp(72px, 14vw, 180px);
   font-weight: 800;
   line-height: 0.9;
   letter-spacing: -0.05em;
@@ -359,7 +428,7 @@ p {
   letter-spacing: 0;
 }
 
-/* Batang persentase gravitasi */
+/* Batang perbandingan */
 .bars {
   display: grid;
   gap: 12px;
@@ -385,7 +454,7 @@ p {
 }
 .in .bar i { width: var(--w); }
 
-/* ---------- Kartu ---------- */
+/* ---------- Kartu (efek kaca) ---------- */
 .cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -395,7 +464,9 @@ p {
 .card {
   padding: 16px 14px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(14, 12, 22, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-top-width: 3px;
   font-family: var(--mono);
@@ -415,19 +486,33 @@ p {
 .card:nth-child(2) { border-top-color: #6f93ff; }
 .card:nth-child(3) { border-top-color: #7c7a92; }
 
+/* ---------- Garis waktu & lapisan ---------- */
+.tl {
+  list-style: none;
+  margin-top: 22px;
+  padding-left: 18px;
+  border-left: 2px solid var(--acc);
+  display: grid;
+  gap: 14px;
+}
+.tl li {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--mute);
+}
+.tl b {
+  display: block;
+  margin-bottom: 2px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: var(--fg);
+}
+
 /* ---------- Penutup ---------- */
-.end {
-  justify-content: center;
-  text-align: center;
-}
-.end .txt {
-  max-width: 600px;
-  margin: 0 auto;
-}
-.end .btn {
-  background: var(--fg);
-  color: #000;
-}
+.end { justify-content: center; text-align: center; }
+.end .txt { max-width: 600px; margin: 0 auto; }
+.end .btn { background: var(--fg); color: #000; }
 
 /* ---------- Footer ---------- */
 .foot {
@@ -441,33 +526,11 @@ p {
   color: var(--mute);
 }
 
-/* ---------- Daftar garis waktu & lapisan ---------- */
-.tl {
-  list-style: none;
-  margin-top: 22px;
-  padding-left: 18px;
-  border-left: 2px solid var(--acc);
-  display: grid;
-  gap: 14px;
-}
-.tl li {
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--mute);
-}
-.tl b {
-  display: block;
-  margin-bottom: 2px;
-  font-family: var(--mono);
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  color: var(--fg);
-}
-
 /* ---------- Responsif ---------- */
 @media (max-width: 700px) {
   nav.top .l { display: none; }
-
+  .neb { animation: none; }
+  .zoom { display: none; }
   section,
   section.r {
     align-items: flex-end;
@@ -475,7 +538,6 @@ p {
     padding-bottom: 9vh;
   }
   .end { align-items: center; }
-
   .pw { top: 30%; }
   .cards { grid-template-columns: 1fr; }
 }
