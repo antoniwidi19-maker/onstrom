@@ -13,6 +13,15 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- LATAR LUAR ANGKASA: lapisan dari belakang ke depan -->
+  <div id="space" aria-hidden="true">
+    <div class="neb neb-a"></div>
+    <div class="neb neb-b"></div>
+    <div class="neb neb-c"></div>
+    <div class="rays"></div>
+    <div class="haze"></div>
+    <div class="grain"></div>
+  </div>
   <canvas id="sky" aria-hidden="true"></canvas>
 
   <nav class="top">
@@ -32,6 +41,13 @@
       <i class="moon" id="m1"></i>
       <i class="moon" id="m2"></i>
     </div>
+  </div>
+
+  <!-- Kontrol zoom planet (di HP pakai cubit) -->
+  <div class="zoom">
+    <button type="button" id="zin" aria-label="Perbesar planet">+</button>
+    <button type="button" id="zout" aria-label="Perkecil planet">−</button>
+    <button type="button" id="zreset" aria-label="Atur ulang tampilan planet">⟲</button>
   </div>
 
   <!-- 1. HERO -->
@@ -140,6 +156,13 @@
     <p>Data: NASA Mars Fact Sheet dan NASA Science. Angka dibulatkan. Cek ulang status misi sebelum dipakai.</p>
   </footer>
 
+  <!-- LIBRARY (CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+  <!-- KODE PROYEK (urutan ini penting) -->
+  <script src="space-background.js"></script>
+  <script src="mars-3d.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
