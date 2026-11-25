@@ -23,15 +23,46 @@
   var CSS = `
 .auth-btn {
   position: fixed; left: 18px; bottom: 22px; z-index: 25;
-  padding: 9px 14px; border-radius: 3px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(12,10,20,0.55); color: #eceaf2;
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 13px 22px; border: 0; border-radius: 999px;
+  background: linear-gradient(135deg, #ff8a52 0%, #ff6a2b 45%, #d1501f 100%);
+  color: #140700;
   font-family: "Space Mono", ui-monospace, Menlo, monospace;
-  font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
-  cursor: pointer; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  transition: border-color 0.3s;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  cursor: pointer; overflow: hidden; isolation: isolate;
+  box-shadow: 0 10px 30px rgba(255, 106, 43, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: authGlow 3.2s ease-in-out infinite;
 }
-.auth-btn:hover { border-color: var(--acc, #ff6a2b); }
+.auth-btn::before {
+  content: "";
+  position: absolute; top: 0; left: -90%;
+  width: 60%; height: 100%;
+  background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.5) 50%, transparent 100%);
+  transform: skewX(-20deg);
+  transition: left 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: -1;
+}
+.auth-btn::after {
+  content: "→";
+  font-size: 14px; line-height: 1;
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.auth-btn:hover {
+  transform: translateY(-3px);
+}
+.auth-btn:hover::before { left: 130%; }
+.auth-btn:hover::after { transform: translateX(4px); }
+.auth-btn:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+@keyframes authGlow {
+  0%, 100% { box-shadow: 0 10px 30px rgba(255, 106, 43, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+  50% { box-shadow: 0 10px 42px rgba(255, 106, 43, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-btn { animation: none; }
+  .auth-btn::before { display: none; }
+}
 .auth-modal {
   position: fixed; inset: 0; z-index: 60;
   display: flex; align-items: center; justify-content: center;
