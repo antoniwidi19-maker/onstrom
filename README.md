@@ -1,48 +1,54 @@
 # MARS — Halaman Informasi Scroll
 
-Halaman satu layar-per-section dengan planet Mars yang dirender real-time (WebGL shader), bulan yang mengorbit, bintang kelap-kelip, bintang jatuh, dan satelit yang lewat. Tanpa library atau gambar eksternal.
+Halaman informasi tentang planet Mars dengan planet 3D yang bisa diputar dan di-zoom, latar luar angkasa berlapis, dan animasi halus.
+
+Dibuat dengan HTML, CSS, dan JavaScript. Library Three.js dan GSAP dimuat dari CDN.
 
 ## File
 
-
+```
 mars/
-├── index.html   # struktur + isi section
-├── style.css    # tampilan + animasi CSS
-├── script.js    # planet (shader), langit, scroll, angka berjalan
+├── index.html            # struktur dan isi section
+├── style.css             # tampilan, nebula, dan animasi CSS
+├── script.js             # scroll, posisi planet, bulan, angka, dan GSAP
+├── mars-3d.js            # planet Mars 3D (Three.js): putar, zoom, inersia
+├── space-background.js   # latar: bintang 3 lapis, debu, bintang jatuh
 └── README.md
+```
 
+## Cara pakai lokal
 
-## Cara pakai
-
-1. Taruh index.html, style.css, script.js dalam satu folder.
-2. Buka index.html di browser (bisa langsung klik dua kali, tidak perlu server).
-3. Scroll.
+Buka `index.html` di browser. Karena library dimuat dari internet, perlu koneksi.
 
 ## Deploy ke GitHub Pages
 
-1. Upload ketiga file ke root repo (sejajar, bukan di subfolder).
-2. Settings → Pages → Source: main / (root).
-3. Tunggu 1–2 menit, buka https://USERNAME.github.io/NAMA-REPO/.
-4. Nama file harus persis huruf kecil: style.css dan script.js.
+1. Upload semua file ke root repo, sejajar dan tidak di dalam subfolder.
+2. Buka **Settings → Pages → Source: main / (root)**.
+3. Tunggu 1–2 menit, lalu buka `https://USERNAME.github.io/NAMA-REPO/`.
+4. Nama file harus persis huruf kecil.
+
+## Kontrol planet
+
+- **Desktop:** seret untuk memutar, Ctrl + scroll untuk zoom, atau pakai tombol `+` dan `−`.
+- **HP:** seret untuk memutar, cubit untuk zoom.
 
 ## Kustomisasi
 
 | Mau ubah | Di mana |
 |---|---|
-| Teks, angka, judul | index.html (angka tujuan di data-to="...") |
-| Kata raksasa di belakang | <div class="ghost"> di index.html |
-| Warna aksen | --acc di style.css |
-| Posisi planet tiap section | data-x (-1 kiri, 0 tengah, 1 kanan) dan data-s (ukuran) |
-| Warna permukaan planet | angka vec3(...) di bagian alb pada shader (script.js) |
-| Kecepatan putar planet | .06 di baris rot+= (script.js) |
-| Kemiringan sumbu | .44 di fungsi T() pada shader |
-| Jumlah bintang | SW*SH/5000 di sizeSky() (angka kecil = lebih banyak) |
-| Orbit dan ukuran bulan | array moons (a, b = jari-jari orbit, sp = kecepatan, size) |
-| Frekuensi bintang jatuh / satelit | nextShoot dan nextSat di drawSky() |
+| Teks, angka, judul | `index.html` (angka tujuan di `data-to="..."`) |
+| Warna aksen | `--acc` di `style.css` |
+| Warna cahaya tepi planet | `data-c` pada section di `index.html` (lalu dibaca `script.js`) |
+| Posisi dan ukuran planet tiap section | `data-x` (-1 kiri, 0 tengah, 1 kanan) dan `data-s` |
+| Warna permukaan Mars | `main()` di `FS_PLANET` pada `mars-3d.js` |
+| Kecepatan putar otomatis | `0.05` di `autoSpeed` pada `mars-3d.js` |
+| Jumlah bintang | `build()` di `space-background.js` (angka kecil = lebih banyak) |
+| Frekuensi bintang jatuh | `nextShoot` di `space-background.js` |
+| Orbit dan ukuran bulan | array `moons` di `script.js` |
 
 ## Catatan
 
-- Planet pakai WebGL. Jika browser tidak mendukung, otomatis tampil planet gradient CSS sebagai cadangan.
-- Kalau terasa berat di HP lama, turunkan 1.25 / 1.5 pada fungsi layout() (resolusi planet).
-- Animasi otomatis dikurangi jika device mengaktifkan reduce motion.
-- Fakta di halaman ini ringkas dan untuk keperluan demo, cek ulang sebelum dipakai serius
+- Jika WebGL atau Three.js tidak tersedia, planet otomatis diganti tampilan CSS, dan tombol zoom disembunyikan.
+- Di HP, jumlah bintang dan kualitas render dikurangi otomatis agar tetap lancar.
+- Jika perangkat mengaktifkan **kurangi gerakan**, animasi dinonaktifkan.
+- Fakta di halaman ini ringkas dan untuk keperluan demo. Cek ulang sebelum dipakai serius.
