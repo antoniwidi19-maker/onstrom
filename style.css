@@ -141,6 +141,23 @@ nav.top .l a {
 }
 nav.top .l a:hover { color: var(--fg); }
 
+/* Menu digeser ke kanan. Ruang di kanan disisakan untuk tombol LOGIN */
+nav.top .l {
+  margin-left: auto;
+  margin-right: 150px;
+  align-items: center;
+  gap: 30px;
+}
+/* Tombol LOGIN (dari auth.js) pindah ke kanan atas, sejajar dengan menu */
+#authBtn,
+.auth-btn {
+  top: 13px !important;
+  right: 5vw !important;
+  bottom: auto !important;
+  left: auto !important;
+  z-index: 26 !important;
+}
+
 /* ---------- Tombol ---------- */
 .btn {
   display: inline-block;
@@ -430,210 +447,4 @@ p {
 
 /* Batang perbandingan */
 .bars {
-  display: grid;
-  gap: 12px;
-  margin-top: 22px;
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  color: var(--mute);
-}
-.bar {
-  height: 8px;
-  margin-top: 6px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-}
-.bar i {
-  display: block;
-  height: 100%;
-  width: 0;
-  background: var(--acc);
-  transition: width 1.8s 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.in .bar i { width: var(--w); }
-
-/* ---------- Kartu (efek kaca) ---------- */
-.cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-top: 26px;
-}
-.card {
-  padding: 16px 14px;
-  border-radius: 10px;
-  background: rgba(14, 12, 22, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-top-width: 3px;
-  font-family: var(--mono);
-  font-size: 11px;
-  line-height: 1.5;
-  color: var(--mute);
-  text-align: left;
-}
-.card b {
-  display: block;
-  margin-bottom: 6px;
-  font-family: var(--display);
-  font-size: 16px;
-  color: var(--fg);
-}
-.card:nth-child(1) { border-top-color: #ff6a2b; }
-.card:nth-child(2) { border-top-color: #6f93ff; }
-.card:nth-child(3) { border-top-color: #7c7a92; }
-
-/* ---------- Garis waktu & lapisan ---------- */
-.tl {
-  list-style: none;
-  margin-top: 22px;
-  padding-left: 18px;
-  border-left: 2px solid var(--acc);
-  display: grid;
-  gap: 14px;
-}
-.tl li {
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--mute);
-}
-.tl b {
-  display: block;
-  margin-bottom: 2px;
-  font-family: var(--mono);
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  color: var(--fg);
-}
-
-/* ---------- Penutup ---------- */
-.end { justify-content: center; text-align: center; }
-.end .txt { max-width: 600px; margin: 0 auto; }
-.end .btn { background: var(--fg); color: #000; }
-
-/* ---------- Footer ---------- */
-.foot {
-  position: relative;
-  z-index: 4;
-  padding: 40px 7vw 56px;
-  text-align: center;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  color: var(--mute);
-}
-
-/* ---------- Responsif ---------- */
-@media (max-width: 700px) {
-  nav.top .l { display: none; }
-  .neb { animation: none; }
-  .zoom { display: none; }
-  section,
-  section.r {
-    align-items: flex-end;
-    justify-content: flex-start;
-    padding-bottom: 9vh;
-  }
-  .end { align-items: center; }
-  .pw { top: 30%; }
-  .cards { grid-template-columns: 1fr; }
-}
-
-/* ---------- Kurangi gerakan ---------- */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation: none !important;
-    transition-duration: 0.01ms !important;
-    transition-delay: 0s !important;
-  }
-  .txt > *,
-  [data-split] .w {
-    transform: none !important;
-    filter: none !important;
-  }
-  .hint i { transform: none; }
-}
-
-/* ---------- Instagram (footer) ---------- */
-.social {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 28px;
-}
-.social-label {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.4em;
-  text-transform: uppercase;
-  color: var(--mute);
-}
-.ig-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 44px;
-  padding: 10px 20px 10px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(14, 12, 22, 0.55);
-  color: var(--fg);
-  text-decoration: none;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transition: border-color 0.4s ease, box-shadow 0.4s ease, transform 0.4s ease;
-}
-.ig-link:hover,
-.ig-link:focus-visible {
-  border-color: rgba(255, 106, 43, 0.6);
-  box-shadow: 0 0 24px rgba(255, 106, 43, 0.25);
-  transform: translateY(-2px);
-  outline: none;
-}
-.ig-icon {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.04);
-  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.4s ease;
-}
-.ig-icon svg { width: 20px; height: 20px; }
-.ig-link:hover .ig-icon {
-  transform: scale(1.08) rotate(-4deg);
-  background: rgba(255, 255, 255, 0.08);
-}
-.ig-text {
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-  line-height: 1.25;
-}
-.ig-name {
-  font-family: var(--display);
-  font-size: 15px;
-  font-weight: 700;
-}
-.ig-user {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  color: var(--mute);
-}
-.ig-arrow {
-  margin-left: 4px;
-  color: var(--mute);
-  transition: transform 0.4s ease, color 0.4s ease;
-}
-.ig-link:hover .ig-arrow {
-  transform: translateX(4px);
-  color: var(--acc);
-}
+  display:
