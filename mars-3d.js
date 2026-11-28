@@ -1,5 +1,5 @@
 /* =========================================================
-   MARS — mars-3d.js (versi 3)
+   MARS — mars-3d.js (versi 5)
    Sistem Mars 3D dengan Three.js:
    - Planet Mars: tekstur foto (mars-texture.jpg), cahaya dari Matahari,
      tepi planet lebih gelap, atmosfer tipis di tepi
@@ -8,6 +8,7 @@
    - Tombol "Lihat sistem": menampilkan Mars beserta kedua bulannya
    - Diputar dengan seret, cubit, atau tombol zoom; berputar pelan lagi
    - Klik kartu Olympus Mons atau Valles Marineris: kamera menuju lokasi itu
+   - Kontrol simulasi: Jeda/Main, kecepatan 0.5×–4×, garis orbit, dan Reset
    - Berhenti saat tab tidak aktif, kualitas turun otomatis jika berat
    - Jika WebGL atau Three.js tidak tersedia: pakai cadangan CSS (.nogl)
    Catatan: skala jarak dan ukuran bulan sengaja diperbesar agar terlihat.
@@ -16,6 +17,7 @@
   "use strict";
 
   var TEXTURE_URL = "mars-texture.jpg";
+  var BUMP_URL = "mars-bump.jpg";   // peta relief (opsional)
 
   var pw = document.getElementById("pw");
   var cv = document.getElementById("cv");
@@ -28,6 +30,15 @@
     if (z) z.style.display = "none";
   }
   if (!pw || !cv || typeof THREE === "undefined") { fail(); return; }
+
+  /* ----- Bersihkan elemen dekoratif yang membuat kotak dan efek berdenyut ----- */
+  var cleanStyle = document.createElement("style");
+  cleanStyle.textContent =
+    ".ghost,.rays{display:none!important}" +
+    ".pw::before{display:none!important}" +
+    ".pf{animation:none!important}" +
+    "@media (min-width:701px){.pw{top:42%!important}}";
+  document.head.appendChild(cleanStyle);
 
   /* ----- Shader ----- */
   var VS = [
@@ -48,6 +59,8 @@ uniform float uTime;
 uniform float uLow;
 uniform float uHasMap;
 uniform sampler2D uMap;
+uniform sampler2D uBump;
+uniform float uHasBump;
 uniform vec3 uSunObj;
 uniform vec3 uSunView;
 uniform vec3 uRim;
@@ -134,6 +147,21 @@ void main() {
     N = normalize(q - g * 0.12);
   }
 
+  // relief dari peta ketinggian (mars-bump.jpg), jika tersedia
+  if (uHasMap > 0.5 && uHasBump > 0.5) {
+    float uu = atan(q.z, q.x) / 6.2831853 + 0.5;
+    float vv = asin(clamp(q.y, -1.0, 1.0)) / 3.1415927 + 0.5;
+    float eb = 0.0015;
+    float hL = texture2D(uBump, vec2(uu - eb, vv)).r;
+    float hR = texture2D(uBump, vec2(uu + eb, vv)).r;
+    float hD = texture2D(uBump, vec2(uu, vv - eb)).r;
+    float hU = texture2D(uBump, vec2(uu, vv + eb)).r;
+    vec2 gr = vec2(hR - hL, hU - hD);
+    vec3 T = normalize(cross(vec3(0.0, 1.0, 0.0), q) + vec3(1e-4));
+    vec3 B = cross(q, T);
+    N = normalize(q - (gr.x * T + gr.y * B) * 4.0);
+  }
+
   vec3 alb;
   if (uHasMap > 0.5) {
     // peta Mars (proyeksi equirectangular)
@@ -172,30 +200,17 @@ void main() {
   vec3 col = alb * (dif * vec3(1.0, 0.95, 0.88) * 1.35 + vec3(0.012, 0.007, 0.01));
   // redup di tepi planet, supaya terlihat seperti bola
   float mu = max(dot(normalize(vN), normalize(vView)), 0.0);
-  col *= 0.4 + 0.6 * pow(mu, 0.45);
+  col *= 0.55 + 0.45 * pow(mu, 0.5);
 
-  // cahaya tipis atmosfer di tepi
+  // atmosfer sangat tipis: hanya samar di tepi yang terkena cahaya
   vec3 nV = normalize(vN);
   vec3 vV = normalize(vView);
-  float fr = pow(max(1.0 - dot(nV, vV), 0.0), 3.0);
-  col += uRim * fr * 0.35 * (0.2 + 0.8 * max(dot(nV, uSunView), 0.0));
+  float fr = pow(max(1.0 - dot(nV, vV), 0.0), 5.0);
+  float litEdge = max(dot(nV, uSunView), 0.0);
+  col += uRim * fr * 0.12 * litEdge;
 
   gl_FragColor = vec4(col, 1.0);
 }`;
-
-  var FS_ATMO = [
-    "uniform vec3 uRim;",
-    "uniform vec3 uSunView;",
-    "varying vec3 vN;",
-    "varying vec3 vView;",
-    "void main() {",
-    "  vec3 nV = normalize(vN);",
-    "  vec3 vV = normalize(vView);",
-    "  float fr = pow(max(1.0 - abs(dot(nV, vV)), 0.0), 2.5);",
-    "  float lit = 0.25 + 0.75 * max(dot(nV, uSunView), 0.0);",
-    "  gl_FragColor = vec4(uRim * fr * lit * 0.9, 1.0);",
-    "}"
-  ].join("\n");
 
   // bulan: permukaan berbatu dan berkawah, pencahayaan sama dengan planet
   var FS_MOON = `
@@ -269,19 +284,24 @@ void main() {
   var placeholder = new THREE.DataTexture(new Uint8Array([150, 80, 45, 255]), 1, 1, THREE.RGBAFormat);
   placeholder.needsUpdate = true;
 
+  var placeholderBump = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1, THREE.RGBAFormat);
+  placeholderBump.needsUpdate = true;
+
   var sunWorld = new THREE.Vector3(-0.75, 0.35, 0.55).normalize();
   var uniforms = {
     uTime: { value: 0 },
     uLow: { value: mobile ? 1 : 0 },
     uHasMap: { value: 0 },
     uMap: { value: placeholder },
+    uBump: { value: placeholderBump },
+    uHasBump: { value: 0 },
     uSunObj: { value: new THREE.Vector3() },
     uSunView: { value: new THREE.Vector3(0, 0, 1) },
     uRim: { value: new THREE.Vector3(1, 0.42, 0.17) }
   };
 
-  /* ----- Memuat foto Mars ----- */
-  function loadMap(url) {
+  /* ----- Memuat foto Mars dan peta relief ----- */
+  function loadTex(url, done) {
     var img = new Image();
     img.onload = function () {
       var maxW = mobile ? 2048 : 4096;
@@ -296,13 +316,13 @@ void main() {
       tex.magFilter = THREE.LinearFilter;
       tex.generateMipmaps = false;
       tex.needsUpdate = true;
-      uniforms.uMap.value = tex;
-      uniforms.uHasMap.value = 1;
+      done(tex);
     };
     img.onerror = function () { /* tetap pakai permukaan prosedural */ };
     img.src = url;
   }
-  loadMap(TEXTURE_URL);
+  loadTex(TEXTURE_URL, function (tex) { uniforms.uMap.value = tex; uniforms.uHasMap.value = 1; });
+  loadTex(BUMP_URL, function (tex) { uniforms.uBump.value = tex; uniforms.uHasBump.value = 1; });
 
   var segW = mobile ? 64 : 128, segH = mobile ? 48 : 96;
   var planetMat = new THREE.ShaderMaterial({ uniforms: uniforms, vertexShader: VS, fragmentShader: FS_PLANET });
@@ -311,15 +331,6 @@ void main() {
   tiltGroup.add(planet);
   scene.add(tiltGroup);
 
-  var atmoMat = new THREE.ShaderMaterial({
-    uniforms: uniforms,
-    vertexShader: VS,
-    fragmentShader: FS_ATMO,
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending
-  });
-  scene.add(new THREE.Mesh(new THREE.SphereGeometry(1.07, segW, segH), atmoMat));
 
   /* ----- Derau sederhana untuk bentuk bulan (dihitung di CPU) ----- */
   function h3(x, y, z) {
@@ -546,6 +557,56 @@ void main() {
   }
   sysBtn.addEventListener("click", toggleSystem);
 
+  /* ----- Kontrol simulasi: jeda, kecepatan, garis orbit, reset kamera ----- */
+  var paused = false, orbitOn = true, speedIdx = 1;
+  var SPEEDS = [0.5, 1, 2, 4];
+  var ctrlStyle = document.createElement("style");
+  ctrlStyle.textContent =
+    ".sim-ctrl{position:fixed;left:18px;bottom:22px;z-index:26;display:flex;gap:8px}" +
+    ".sim-ctrl button{min-width:44px;height:34px;padding:0 12px;border-radius:3px;border:1px solid rgba(255,255,255,.16);" +
+    "background:rgba(12,10,20,.55);color:#eceaf2;font-family:'Space Mono',ui-monospace,Menlo,monospace;font-size:10px;" +
+    "letter-spacing:.14em;text-transform:uppercase;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);" +
+    "transition:border-color .3s,background .3s}" +
+    ".sim-ctrl button:hover,.sim-ctrl button:focus-visible{border-color:#ff6a2b;outline:none}" +
+    ".sim-ctrl button[aria-pressed=\"false\"]{color:#8b8798}";
+  document.head.appendChild(ctrlStyle);
+
+  var ctrlBox = document.createElement("div");
+  ctrlBox.className = "sim-ctrl";
+  ctrlBox.innerHTML =
+    '<button type="button" id="simPlay">Jeda</button>' +
+    '<button type="button" id="simSpeed">1×</button>' +
+    '<button type="button" id="simOrbit" aria-pressed="true">Orbit</button>' +
+    '<button type="button" id="simReset">Reset</button>';
+  document.body.appendChild(ctrlBox);
+
+  var simPlay = document.getElementById("simPlay");
+  var simSpeed = document.getElementById("simSpeed");
+  var simOrbit = document.getElementById("simOrbit");
+  var simReset = document.getElementById("simReset");
+
+  function resetView() {
+    releaseFocus();
+    camDistT = systemView ? DIST_SYS : DIST;
+    rot = 0;
+    vel = 0;
+    tiltOff = 0;
+  }
+
+  simPlay.addEventListener("click", function () {
+    paused = !paused;
+    simPlay.textContent = paused ? "Main" : "Jeda";
+  });
+  simSpeed.addEventListener("click", function () {
+    speedIdx = (speedIdx + 1) % SPEEDS.length;
+    simSpeed.textContent = SPEEDS[speedIdx] + "×";
+  });
+  simOrbit.addEventListener("click", function () {
+    orbitOn = !orbitOn;
+    simOrbit.setAttribute("aria-pressed", orbitOn ? "true" : "false");
+  });
+  simReset.addEventListener("click", resetView);
+
   /* ----- Seret dan cubit ----- */
   cv.addEventListener("pointerdown", function (e) {
     releaseFocus();
@@ -646,7 +707,7 @@ void main() {
       vel = 0;
     } else {
       if (!dragging) { rot += vel; vel *= 0.93; }
-      rot += autoSpeed * dt;
+      rot += autoSpeed * dt * (paused ? 0 : SPEEDS[speedIdx]);
     }
 
     // saat fokus, kemiringan dan lintang diatur agar lokasi tepat di tengah
@@ -662,12 +723,13 @@ void main() {
     uniforms.uTime.value = t;
 
     // orbit bulan: periode sesuai data (dengan rasio Phobos : Deimos yang benar)
-    simT += dt * (reduce ? 0 : 1);
+    simT += dt * (reduce || paused ? 0 : SPEEDS[speedIdx]);
     MOONS.forEach(function (m) {
       m.holder.rotation.set(m.incl, m.phase + Math.PI * 2 * simT / m.period, 0);
     });
+    var orbitTarget = orbitOn ? (systemView ? 0.22 : 0.08) : 0;
     orbitMats.forEach(function (mat) {
-      mat.opacity += ((systemView ? 0.22 : 0) - mat.opacity) * 0.08;
+      mat.opacity += (orbitTarget - mat.opacity) * 0.08;
     });
 
     // arah matahari di ruang objek (ikut putaran planet) dan di ruang kamera
