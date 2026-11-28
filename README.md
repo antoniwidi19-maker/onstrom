@@ -1,22 +1,28 @@
 # MARS — Halaman Informasi Scroll
 
-Halaman informasi tentang planet Mars dengan planet 3D yang bisa diputar dan di-zoom, latar luar angkasa berlapis, dan animasi halus.
+Halaman informasi tentang planet Mars dengan latar luar angkasa berlapis, planet 3D yang bisa diputar dan di-zoom, dan animasi halus.
 
-Dibuat dengan HTML, CSS, dan JavaScript. Library Three.js dan GSAP dimuat dari CDN.
+Dibuat dengan HTML, CSS, dan JavaScript. Library Three.js dan GSAP dimuat dari CDN. Login memakai Firebase Authentication.
 
 ## File
 
 ```
-mars/
+onstrom/
 ├── index.html            # struktur dan isi section
-├── style.css             # tampilan, nebula, dan animasi CSS
+├── style.css             # tampilan, nebula, navigasi, dan animasi
 ├── script.js             # scroll, posisi planet, bulan, angka, dan GSAP
-├── mars-3d.js            # planet Mars 3D (Three.js): putar, zoom, inersia
-├── space-background.js   # latar: bintang 3 lapis, debu, bintang jatuh
+├── mars-3d.js            # planet Mars 3D (Three.js): tekstur, putar, zoom, fokus lokasi
+├── space-background.js   # latar: bintang berlapis, debu kosmik, bintang jatuh
+├── auth.js               # login email dan password (Firebase)
+├── mars-texture.jpg      # peta permukaan Mars dari NASA (lihat di bawah)
 └── README.md
 ```
 
-## Cara pakai lokal
+## Peta permukaan Mars
+
+Planet memakai foto `mars-texture.jpg`. Unduh dari `science.nasa.gov/3d-resources/mars/` (file Mars.jpg), ganti namanya menjadi `mars-texture.jpg`, lalu upload ke root repo. Kalau file ini belum ada, planet tetap tampil dengan permukaan prosedural.
+
+## Cara pakai
 
 Buka `index.html` di browser. Karena library dimuat dari internet, perlu koneksi.
 
@@ -31,6 +37,7 @@ Buka `index.html` di browser. Karena library dimuat dari internet, perlu koneksi
 
 - **Desktop:** seret untuk memutar, Ctrl + scroll untuk zoom, atau pakai tombol `+` dan `−`.
 - **HP:** seret untuk memutar, cubit untuk zoom.
+- **Lokasi:** klik kartu Olympus Mons atau Valles Marineris di bagian Fakta untuk melihat lokasinya.
 
 ## Kustomisasi
 
@@ -38,17 +45,16 @@ Buka `index.html` di browser. Karena library dimuat dari internet, perlu koneksi
 |---|---|
 | Teks, angka, judul | `index.html` (angka tujuan di `data-to="..."`) |
 | Warna aksen | `--acc` di `style.css` |
-| Warna cahaya tepi planet | `data-c` pada section di `index.html` (lalu dibaca `script.js`) |
+| Warna cahaya tepi planet | `data-c` pada section di `index.html` |
 | Posisi dan ukuran planet tiap section | `data-x` (-1 kiri, 0 tengah, 1 kanan) dan `data-s` |
-| Warna permukaan Mars | `main()` di `FS_PLANET` pada `mars-3d.js` |
-| Kecepatan putar otomatis | `0.05` di `autoSpeed` pada `mars-3d.js` |
-| Jumlah bintang | `build()` di `space-background.js` (angka kecil = lebih banyak) |
-| Frekuensi bintang jatuh | `nextShoot` di `space-background.js` |
-| Orbit dan ukuran bulan | array `moons` di `script.js` |
+| Kecepatan putar otomatis | `autoSpeed` di `mars-3d.js` |
+| Koordinat kamera ke lokasi | `LOC` di `mars-3d.js` |
+| Jumlah bintang | `build()` di `space-background.js` |
+| Konfigurasi login | `FIREBASE_CONFIG` di `auth.js` |
 
 ## Catatan
 
-- Jika WebGL atau Three.js tidak tersedia, planet otomatis diganti tampilan CSS, dan tombol zoom disembunyikan.
+- Jika WebGL atau Three.js tidak tersedia, planet otomatis diganti tampilan CSS dan tombol zoom disembunyikan.
 - Di HP, jumlah bintang dan kualitas render dikurangi otomatis agar tetap lancar.
-- Jika perangkat mengaktifkan **kurangi gerakan**, animasi dinonaktifkan.
+- Animasi berhenti saat tab tidak dilihat, dan dinonaktifkan jika perangkat mengaktifkan kurangi gerakan.
 - Fakta di halaman ini ringkas dan untuk keperluan demo. Cek ulang sebelum dipakai serius.
