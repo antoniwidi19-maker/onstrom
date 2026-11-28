@@ -1,14 +1,16 @@
 /* =========================================================
-   MARS — mars-3d.js (versi 2)
-   Planet Mars 3D dengan Three.js:
-   - Tekstur foto Mars dari mars-texture.jpg (cadangan: permukaan prosedural)
-   - Cahaya dari satu arah, sisi malam lebih gelap, cahaya atmosfer tipis di tepi
-   - Diputar dengan seret (mouse atau sentuhan), inersia, lalu berputar pelan lagi
-   - Zoom: Ctrl+scroll (desktop), cubit (HP), atau tombol + dan −
-   - Klik kartu Olympus Mons atau Valles Marineris di bagian Fakta:
-     kamera berputar dan zoom ke lokasi itu
+   MARS — mars-3d.js (versi 3)
+   Sistem Mars 3D dengan Three.js:
+   - Planet Mars: tekstur foto (mars-texture.jpg), cahaya dari Matahari,
+     tepi planet lebih gelap, atmosfer tipis di tepi
+   - Phobos dan Deimos: bentuk tidak beraturan, kawah Stickney di Phobos,
+     mengorbit di bidang ekuator Mars dengan rasio periode sesuai data
+   - Tombol "Lihat sistem": menampilkan Mars beserta kedua bulannya
+   - Diputar dengan seret, cubit, atau tombol zoom; berputar pelan lagi
+   - Klik kartu Olympus Mons atau Valles Marineris: kamera menuju lokasi itu
    - Berhenti saat tab tidak aktif, kualitas turun otomatis jika berat
    - Jika WebGL atau Three.js tidak tersedia: pakai cadangan CSS (.nogl)
+   Catatan: skala jarak dan ukuran bulan sengaja diperbesar agar terlihat.
    ========================================================= */
 (function () {
   "use strict";
@@ -122,7 +124,7 @@ void main() {
   vec3 q = normalize(vPos);
   vec3 sunO = normalize(uSunObj);
 
-  // bayangan dari relief kecil (hanya di desktop)
+  // bayangan dari relief kecil (hanya di desktop, dan hanya tanpa foto)
   vec3 N = q;
   if (uLow < 0.5 && uHasMap < 0.5) {
     float e = 0.012;
@@ -161,7 +163,7 @@ void main() {
     }
   }
 
-  // detail halus agar tetap tajam saat di-zoom
+  // detail halus agar tetap tajam saat di-zoom (hanya tanpa foto)
   if (uHasMap < 0.5) alb *= 0.94 + 0.12 * noise(q * 40.0);
 
   // pencahayaan dengan batas siang-malam yang lembut
@@ -195,6 +197,48 @@ void main() {
     "}"
   ].join("\n");
 
+  // bulan: permukaan berbatu dan berkawah, pencahayaan sama dengan planet
+  var FS_MOON = `
+uniform vec3 uSunView;
+uniform vec3 uTint;
+uniform vec3 uCrater;
+uniform float uCraterCos;
+uniform float uCraterOn;
+uniform float uSeed;
+varying vec3 vPos;
+varying vec3 vN;
+varying vec3 vView;
+
+float hash(vec3 p) {
+  p = fract(p * 0.3183099 + 0.1);
+  p *= 17.0;
+  return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+}
+float noise(vec3 x) {
+  vec3 i = floor(x);
+  vec3 f = fract(x);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(mix(hash(i), hash(i + vec3(1.0,0.0,0.0)), f.x),
+        mix(hash(i + vec3(0.0,1.0,0.0)), hash(i + vec3(1.0,1.0,0.0)), f.x), f.y),
+    mix(mix(hash(i + vec3(0.0,0.0,1.0)), hash(i + vec3(1.0,0.0,1.0)), f.x),
+        mix(hash(i + vec3(0.0,1.0,1.0)), hash(i + vec3(1.0,1.0,1.0)), f.x), f.y),
+    f.z);
+}
+
+void main() {
+  vec3 d = normalize(vPos);
+  float g = noise(d * 7.0 + uSeed) * 0.6 + noise(d * 18.0 + uSeed * 1.7) * 0.4;
+  vec3 alb = uTint * (0.72 + 0.56 * g);
+  // kawah besar (Stickney di Phobos): bagian dalam lebih gelap
+  float cd = dot(d, normalize(uCrater));
+  float bowl = uCraterOn * smoothstep(uCraterCos, 1.0, cd);
+  alb *= 1.0 - 0.35 * bowl;
+  float dif = max(dot(normalize(vN), normalize(uSunView)), 0.0);
+  vec3 col = alb * (dif * 1.25 + 0.035);
+  gl_FragColor = vec4(col, 1.0);
+}`;
+
   /* ----- Three.js: renderer, scene, kamera ----- */
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var mobile = window.innerWidth <= 700 || /Mobi|Android/i.test(navigator.userAgent);
@@ -215,7 +259,7 @@ void main() {
   renderer.setPixelRatio(dpr);
   renderer.setClearColor(0x000000, 0);
 
-  var DIST = 5.0, DIST_MIN = 4.2, DIST_MAX = 8.0, DIST_FOCUS = 4.5;
+  var DIST = 5.0, DIST_MIN = 4.2, DIST_MAX = 10.0, DIST_FOCUS = 4.5, DIST_SYS = 10.0;
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
   var camDist = DIST, camDistT = DIST;
@@ -277,6 +321,109 @@ void main() {
   });
   scene.add(new THREE.Mesh(new THREE.SphereGeometry(1.07, segW, segH), atmoMat));
 
+  /* ----- Derau sederhana untuk bentuk bulan (dihitung di CPU) ----- */
+  function h3(x, y, z) {
+    var s = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453;
+    return s - Math.floor(s);
+  }
+  function vnoise(x, y, z) {
+    var xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+    var xf = x - xi, yf = y - yi, zf = z - zi;
+    var u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf), w = zf * zf * (3 - 2 * zf);
+    var c000 = h3(xi, yi, zi), c100 = h3(xi + 1, yi, zi);
+    var c010 = h3(xi, yi + 1, zi), c110 = h3(xi + 1, yi + 1, zi);
+    var c001 = h3(xi, yi, zi + 1), c101 = h3(xi + 1, yi, zi + 1);
+    var c011 = h3(xi, yi + 1, zi + 1), c111 = h3(xi + 1, yi + 1, zi + 1);
+    var x00 = c000 + (c100 - c000) * u, x10 = c010 + (c110 - c010) * u;
+    var x01 = c001 + (c101 - c001) * u, x11 = c011 + (c111 - c011) * u;
+    var y0 = x00 + (x10 - x00) * v, y1 = x01 + (x11 - x01) * v;
+    return y0 + (y1 - y0) * w;
+  }
+  function fbmCpu(x, y, z) {
+    return vnoise(x, y, z) * 0.6 + vnoise(x * 2.1, y * 2.1, z * 2.1) * 0.3 + vnoise(x * 4.3, y * 4.3, z * 4.3) * 0.1;
+  }
+
+  /* ----- Bulan: Phobos dan Deimos (skala visual, periode sesuai data) ----- */
+  // Periode asli (detik) dari data NASA: Phobos 7 jam 39 menit, Deimos 30 jam 18 menit
+  var PHOBOS_T = 27540, DEIMOS_T = 109080;
+  var MOONS = [
+    { name: "Phobos", orbit: 1.55, radius: 0.085, stretch: [1.2, 0.95, 0.85], incl: 0.018,
+      period: 40, phase: 0.6, tint: [0.46, 0.41, 0.37], ampl: 0.18, seed: 3.1,
+      crater: [1, 0.3, 0.2], craterR: 0.42, craterDepth: 0.12 },
+    // periode Deimos sekitar 4 kali Phobos, sama seperti data asli
+    { name: "Deimos", orbit: 2.45, radius: 0.048, stretch: [1.1, 1.0, 0.95], incl: 0.031,
+      period: 40 * DEIMOS_T / PHOBOS_T, phase: 2.4, tint: [0.52, 0.48, 0.44], ampl: 0.12, seed: 7.7,
+      crater: null, craterR: 0, craterDepth: 0 }
+  ];
+
+  // bentuk bulan: bola yang ditarik dan diberi derau, dengan kawah bila ada
+  function makeMoonMesh(m) {
+    var geo = new THREE.SphereGeometry(1, 40, 28);
+    var pos = geo.attributes.position;
+    var v = new THREE.Vector3();
+    var cdir = m.crater ? new THREE.Vector3(m.crater[0], m.crater[1], m.crater[2]).normalize() : null;
+    for (var i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i).normalize();
+      var n = fbmCpu(v.x * 2.2 + m.seed, v.y * 2.2, v.z * 2.2) - 0.5;
+      var r = 1 + m.ampl * n;
+      if (cdir) {
+        var ang = v.angleTo(cdir);
+        if (ang < m.craterR) {
+          var t = ang / m.craterR;
+          r -= m.craterDepth * (1 - t * t);
+        }
+      }
+      v.multiplyScalar(r);
+      v.x *= m.stretch[0] * m.radius;
+      v.y *= m.stretch[1] * m.radius;
+      v.z *= m.stretch[2] * m.radius;
+      pos.setXYZ(i, v.x, v.y, v.z);
+    }
+    pos.needsUpdate = true;
+    geo.computeVertexNormals();
+    var mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uSunView: uniforms.uSunView,
+        uTint: { value: new THREE.Vector3(m.tint[0], m.tint[1], m.tint[2]) },
+        uCrater: { value: cdir ? cdir : new THREE.Vector3(0, 1, 0) },
+        uCraterCos: { value: Math.cos(m.craterR) },
+        uCraterOn: { value: cdir ? 1 : 0 },
+        uSeed: { value: m.seed }
+      },
+      vertexShader: VS,
+      fragmentShader: FS_MOON
+    });
+    return new THREE.Mesh(geo, mat);
+  }
+
+  var orbitMats = [];
+  MOONS.forEach(function (m) {
+    m.mesh = makeMoonMesh(m);
+    // holder berputar di bidang ekuator Mars; bulan ada di ujung lengannya
+    m.holder = new THREE.Group();
+    m.holder.add(m.mesh);
+    m.mesh.position.set(m.orbit, 0, 0);
+    tiltGroup.add(m.holder);
+
+    // garis orbit tipis dan transparan
+    var pts = [];
+    for (var k = 0; k <= 128; k++) {
+      var a = k / 128 * Math.PI * 2;
+      pts.push(new THREE.Vector3(Math.cos(a) * m.orbit, 0, -Math.sin(a) * m.orbit));
+    }
+    var lineMat = new THREE.LineBasicMaterial({ color: 0xffe0c8, transparent: true, opacity: 0, depthWrite: false });
+    var line = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), lineMat);
+    line.rotation.x = m.incl;
+    tiltGroup.add(line);
+    orbitMats.push(lineMat);
+  });
+
+  // lingkaran lama dari versi sebelumnya disembunyikan, digantikan bulan 3D
+  ["m1", "m2"].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
+
   function resize() {
     var s = Math.max(120, pw.clientWidth);
     renderer.setSize(s, s, false);
@@ -315,7 +462,7 @@ void main() {
   function releaseFocus() {
     if (!focusing) return;
     focusing = false;
-    camDistT = DIST;
+    camDistT = systemView ? DIST_SYS : DIST;
     clearTimeout(focusTimer);
   }
 
@@ -359,6 +506,45 @@ void main() {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); }
     });
   });
+
+  /* ----- Tampilan sistem (Mars + Phobos + Deimos) ----- */
+  var systemView = false;
+  var sysStyle = document.createElement("style");
+  sysStyle.textContent =
+    ".sys-btn{position:fixed;right:70px;bottom:22px;z-index:26;padding:9px 14px;border-radius:3px;" +
+    "border:1px solid rgba(255,255,255,.16);background:rgba(12,10,20,.55);color:#eceaf2;" +
+    "font-family:'Space Mono',ui-monospace,Menlo,monospace;font-size:10px;letter-spacing:.18em;" +
+    "text-transform:uppercase;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);" +
+    "transition:border-color .3s,background .3s}" +
+    ".sys-btn:hover,.sys-btn:focus-visible{border-color:#ff6a2b;outline:none}" +
+    ".sys-note{position:fixed;right:70px;bottom:62px;z-index:26;max-width:260px;" +
+    "font-family:'Space Mono',ui-monospace,Menlo,monospace;font-size:9px;letter-spacing:.12em;line-height:1.5;" +
+    "text-transform:uppercase;color:#a9a5b8;text-align:right;opacity:0;transition:opacity .4s ease;pointer-events:none}" +
+    ".sys-note.on{opacity:1}" +
+    "@media (max-width:700px){.sys-btn,.sys-note{right:18px}}";
+  document.head.appendChild(sysStyle);
+
+  var sysBtn = document.createElement("button");
+  sysBtn.type = "button";
+  sysBtn.className = "sys-btn";
+  sysBtn.textContent = "Lihat sistem";
+  sysBtn.setAttribute("aria-pressed", "false");
+  document.body.appendChild(sysBtn);
+
+  var sysNote = document.createElement("div");
+  sysNote.className = "sys-note";
+  sysNote.textContent = "Skala visual, bukan ukuran dan jarak sebenarnya";
+  document.body.appendChild(sysNote);
+
+  function toggleSystem() {
+    systemView = !systemView;
+    releaseFocus();
+    camDistT = systemView ? DIST_SYS : DIST;
+    sysBtn.textContent = systemView ? "Kembali" : "Lihat sistem";
+    sysBtn.setAttribute("aria-pressed", systemView ? "true" : "false");
+    sysNote.classList.toggle("on", systemView);
+  }
+  sysBtn.addEventListener("click", toggleSystem);
 
   /* ----- Seret dan cubit ----- */
   cv.addEventListener("pointerdown", function (e) {
@@ -417,7 +603,7 @@ void main() {
   bind("zout", function () { releaseFocus(); zoomBy(1.18); });
   bind("zreset", function () {
     releaseFocus();
-    camDistT = DIST;
+    camDistT = systemView ? DIST_SYS : DIST;
     rot = 0;
     vel = 0;
     tiltOff = 0;
@@ -446,6 +632,7 @@ void main() {
   var running = true, rafId = 0;
   var last = performance.now(), t0 = last, ema = 1 / 60, frames = 0;
   var autoSpeed = reduce ? 0 : 0.05;
+  var simT = 0;   // waktu simulasi bulan (detik), tidak ikut berhenti saat fokus
 
   function frame(now) {
     if (!running) return;
@@ -473,6 +660,15 @@ void main() {
     planet.rotation.y = rot;
     tiltGroup.rotation.set(tiltX, 0, tilt);
     uniforms.uTime.value = t;
+
+    // orbit bulan: periode sesuai data (dengan rasio Phobos : Deimos yang benar)
+    simT += dt * (reduce ? 0 : 1);
+    MOONS.forEach(function (m) {
+      m.holder.rotation.set(m.incl, m.phase + Math.PI * 2 * simT / m.period, 0);
+    });
+    orbitMats.forEach(function (mat) {
+      mat.opacity += ((systemView ? 0.22 : 0) - mat.opacity) * 0.08;
+    });
 
     // arah matahari di ruang objek (ikut putaran planet) dan di ruang kamera
     planet.getWorldQuaternion(q).invert();
