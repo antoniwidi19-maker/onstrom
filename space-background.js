@@ -1,10 +1,13 @@
 /* =========================================================
-   MARS — space-background.js
+   MARS — space-background.js (versi 2)
    Latar luar angkasa di canvas #sky:
    - 3 lapisan bintang (jauh, tengah, dekat) dengan parallax
-   - Debu kosmik yang bergerak pelan
+   - Bintang berkelip alami dengan warna putih dingin sampai hangat
+   - Debu kosmik melayang dengan kecepatan dan arah berbeda
+   - Parallax mengikuti mouse, sentuhan, dan scroll
    - Bintang jatuh dan satelit sesekali
-   Nebula, kabut, dan butiran film ada di style.css (#space).
+   - Berhenti otomatis saat tab tidak aktif
+   Nebula dan kabut ada di style.css (#space).
    ========================================================= */
 (function () {
   "use strict";
@@ -18,18 +21,41 @@
   var DPR = Math.min(window.devicePixelRatio || 1, mobile ? 1 : 1.5);
   var TAU = Math.PI * 2;
 
-  // depth: seberapa jauh lapisan ikut bergerak saat parallax (kecil = lebih jauh)
+  // kedalaman tiap lapisan: makin kecil = makin jauh (bergerak lebih lambat)
   var LAYERS = [
-    { dens: 1 / 2600,  rMin: 0.3, rMax: 0.75, depth: 0.15, base: 0.45 },
-    { dens: 1 / 6000,  rMin: 0.6, rMax: 1.2,  depth: 0.45, base: 0.7 },
-    { dens: 1 / 16000, rMin: 1.0, rMax: 1.8,  depth: 0.9,  base: 1.0 }
+    { dens: 1 / 2200,  rMin: 0.3, rMax: 0.8, depth: 0.12, base: 0.4 },
+    { dens: 1 / 5200,  rMin: 0.6, rMax: 1.3, depth: 0.4,  base: 0.7 },
+    { dens: 1 / 15000, rMin: 1.0, rMax: 1.9, depth: 0.9,  base: 1.0 }
   ];
+  // warna bintang: putih dingin, putih, dan sedikit hangat
+  var TEMPS = ["#dfe8ff", "#f4f1ff", "#fff1e0", "#ffd9b8"];
 
   var W = 0, H = 0, stars = [], dust = [], shoots = [], sats = [];
+  var starSprites = [], dustSprite = null;
   var nextShoot = 3, nextSat = 6;
   var quality = mobile ? 0.6 : 1;
-  var mx = 0, my = 0, tmx = 0, tmy = 0, sy = window.scrollY || 0;
+  var px = 0, py = 0, tx = 0, ty = 0;   // parallax: posisi sekarang dan target
+  var sy = window.scrollY || 0;
+  var running = false, rafId = 0;
   var last = performance.now(), t0 = last, ema = 1 / 60;
+  var resizeTimer = 0;
+
+  // sprite titik cahaya yang sudah digambar sekali, supaya ringan dijalankan
+  function makeSprite(color, size) {
+    var c = document.createElement("canvas");
+    c.width = c.height = size;
+    var g = c.getContext("2d");
+    var r = size / 2;
+    var grd = g.createRadialGradient(r, r, 0, r, r, r);
+    grd.addColorStop(0, color);
+    grd.addColorStop(0.2, color);
+    grd.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = grd;
+    g.fillRect(0, 0, size, size);
+    return c;
+  }
+
+  function mod(v, m) { return ((v % m) + m) % m; }
 
   function build() {
     stars = [];
@@ -37,6 +63,8 @@
     LAYERS.forEach(function (L, li) {
       var n = Math.round(W * H * L.dens * quality);
       for (var i = 0; i < n; i++) {
+        var roll = Math.random();
+        var c = roll < 0.6 ? (Math.random() < 0.5 ? 0 : 1) : (Math.random() < 0.6 ? 2 : 3);
         stars.push({
           li: li,
           x: Math.random() * W,
@@ -45,19 +73,19 @@
           ph: Math.random() * TAU,
           sp: 0.4 + Math.random() * 1.6,
           a: L.base * (0.35 + Math.random() * 0.65),
-          warm: Math.random() < 0.18
+          c: c
         });
       }
     });
-    var nd = Math.round((mobile ? 30 : 70) * quality);
+    var nd = Math.round((mobile ? 26 : 60) * quality);
     for (var k = 0; k < nd; k++) {
       dust.push({
         x: Math.random() * W,
         y: Math.random() * H,
-        r: 0.6 + Math.random() * 1.8,
+        r: 0.6 + Math.random() * 1.6,
         vx: 2 + Math.random() * 5,
         vy: -1 + Math.random() * 2,
-        a: 0.04 + Math.random() * 0.08,
+        a: 0.04 + Math.random() * 0.07,
         depth: 0.2 + Math.random() * 0.6
       });
     }
@@ -70,48 +98,43 @@
     cv.height = Math.round(H * DPR);
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     build();
+    if (reduce) draw(0, 0);
   }
 
-  function mod(v, m) { return ((v % m) + m) % m; }
-
-  function draw(t, dt) {
-    ctx.clearRect(0, 0, W, H);
-
-    // bintang per lapisan
+  function drawStars(t) {
     for (var i = 0; i < stars.length; i++) {
       var s = stars[i], L = LAYERS[s.li];
-      var x = mod(s.x - mx * 40 * L.depth, W);
-      var y = mod(s.y - sy * 0.04 * L.depth - my * 30 * L.depth, H);
-      var tw = reduce ? 1 : 0.7 + 0.3 * Math.sin(t * s.sp + s.ph);
-      ctx.globalAlpha = Math.min(1, s.a * tw);
-      ctx.fillStyle = s.warm ? "#ffd6b4" : "#d6e0ff";
-      if (s.r < 0.9) {
-        ctx.fillRect(x, y, s.r * 1.6, s.r * 1.6);
-      } else {
-        ctx.beginPath();
-        ctx.arc(x, y, s.r, 0, TAU);
-        ctx.fill();
-      }
+      var x = mod(s.x - px * 46 * L.depth, W);
+      var y = mod(s.y - sy * 0.04 * L.depth - py * 32 * L.depth, H);
+      // berkedip tidak beraturan: dua gelombang dengan fase berbeda
+      var tw = reduce ? 1 : 0.65 + 0.35 * Math.sin(t * s.sp + s.ph) * (0.6 + 0.4 * Math.sin(t * s.sp * 0.37 + s.ph * 2));
+      var a = Math.min(1, s.a * tw);
+      var sz = s.r * 6;
+      ctx.globalAlpha = a;
+      ctx.drawImage(starSprites[s.c], x - sz / 2, y - sz / 2, sz, sz);
     }
+  }
 
-    // debu kosmik
-    ctx.fillStyle = "#e8d6c8";
+  function drawDust(dt) {
     for (var k = 0; k < dust.length; k++) {
       var d = dust[k];
       if (!reduce) {
-        d.x += d.vx * dt;
-        d.y += d.vy * dt;
-        if (d.x > W + 5) d.x = -5;
-        if (d.y > H + 5) d.y = -5;
-        if (d.y < -5) d.y = H + 5;
+        d.x = mod(d.x + d.vx * dt, W);
+        d.y = mod(d.y + d.vy * dt, H);
       }
+      var x = mod(d.x - px * 30 * d.depth, W);
+      var y = mod(d.y - py * 20 * d.depth, H);
+      var sz = d.r * 10;
       ctx.globalAlpha = d.a;
-      ctx.beginPath();
-      ctx.arc(d.x - mx * 30 * d.depth, d.y - my * 20 * d.depth, d.r, 0, TAU);
-      ctx.fill();
+      ctx.drawImage(dustSprite, x - sz / 2, y - sz / 2, sz, sz);
     }
-    ctx.globalAlpha = 1;
+  }
 
+  function draw(t, dt) {
+    ctx.clearRect(0, 0, W, H);
+    drawStars(t);
+    drawDust(dt);
+    ctx.globalAlpha = 1;
     if (reduce) return;
 
     // bintang jatuh
@@ -161,17 +184,18 @@
   }
 
   function loop(now) {
-    requestAnimationFrame(loop);
+    if (!running) return;
+    rafId = requestAnimationFrame(loop);
     var dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     var t = (now - t0) / 1000;
 
-    mx += (tmx - mx) * 0.03;
-    my += (tmy - my) * 0.03;
+    px += (tx - px) * 0.03;
+    py += (ty - py) * 0.03;
     sy += ((window.scrollY || 0) - sy) * 0.08;
     if (space) {
-      space.style.setProperty("--mx", mx.toFixed(4));
-      space.style.setProperty("--my", my.toFixed(4));
+      space.style.setProperty("--mx", px.toFixed(4));
+      space.style.setProperty("--my", py.toFixed(4));
     }
 
     draw(t, dt);
@@ -185,11 +209,36 @@
     }
   }
 
+  function start() {
+    if (reduce || running) return;
+    running = true;
+    last = performance.now();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function stop() {
+    running = false;
+    cancelAnimationFrame(rafId);
+  }
+
+  // hemat baterai: berhenti saat tab tidak dilihat
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) stop();
+    else start();
+  });
+
   window.addEventListener("pointermove", function (e) {
-    tmx = e.clientX / window.innerWidth - 0.5;
-    tmy = e.clientY / window.innerHeight - 0.5;
+    tx = e.clientX / window.innerWidth - 0.5;
+    ty = e.clientY / window.innerHeight - 0.5;
   }, { passive: true });
-  window.addEventListener("resize", size);
+
+  window.addEventListener("resize", function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(size, 150);
+  });
+
+  starSprites = TEMPS.map(function (col) { return makeSprite(col, 24); });
+  dustSprite = makeSprite("#e8d6c8", 32);
   size();
-  requestAnimationFrame(loop);
+  start();
 })();
