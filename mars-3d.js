@@ -1,9 +1,14 @@
 /* =========================================================
-   MARS — mars-3d.js (versi tekstur foto NASA)
-   - Memakai mars-texture.jpg sebagai permukaan planet
-   - Jika gambar tidak ada, pakai permukaan prosedural
-   - Diputar dengan seret, zoom dengan Ctrl+scroll, cubit, atau tombol + dan −
-   - Jika WebGL / Three.js tidak tersedia: pakai cadangan CSS (.nogl)
+   MARS — mars-3d.js (versi 2)
+   Planet Mars 3D dengan Three.js:
+   - Tekstur foto Mars dari mars-texture.jpg (cadangan: permukaan prosedural)
+   - Cahaya dari satu arah, sisi malam lebih gelap, cahaya atmosfer tipis di tepi
+   - Diputar dengan seret (mouse atau sentuhan), inersia, lalu berputar pelan lagi
+   - Zoom: Ctrl+scroll (desktop), cubit (HP), atau tombol + dan −
+   - Klik kartu Olympus Mons atau Valles Marineris di bagian Fakta:
+     kamera berputar dan zoom ke lokasi itu
+   - Berhenti saat tab tidak aktif, kualitas turun otomatis jika berat
+   - Jika WebGL atau Three.js tidak tersedia: pakai cadangan CSS (.nogl)
    ========================================================= */
 (function () {
   "use strict";
@@ -12,7 +17,7 @@
 
   var pw = document.getElementById("pw");
   var cv = document.getElementById("cv");
-  var api = { ok: false, setTheme: function () {}, nudge: function () {} };
+  var api = { ok: false, setTheme: function () {}, nudge: function () {}, focusOn: function () {} };
   window.MarsPlanet = api;
 
   function fail() {
@@ -129,7 +134,7 @@ void main() {
 
   vec3 alb;
   if (uHasMap > 0.5) {
-    // peta Mars dari NASA (proyeksi equirectangular)
+    // peta Mars (proyeksi equirectangular)
     float u = atan(q.z, q.x) / 6.2831853 + 0.5;
     float v = asin(clamp(q.y, -1.0, 1.0)) / 3.1415927 + 0.5;
     alb = texture2D(uMap, vec2(u, v)).rgb;
@@ -207,14 +212,14 @@ void main() {
   renderer.setPixelRatio(dpr);
   renderer.setClearColor(0x000000, 0);
 
-  var DIST = 4.6, DIST_MIN = 3.2, DIST_MAX = 7.0;
+  var DIST = 4.6, DIST_MIN = 3.2, DIST_MAX = 7.0, DIST_FOCUS = 3.5;
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
   var camDist = DIST, camDistT = DIST;
   camera.position.set(0, 0, camDist);
 
-  // tekstur sementara (1 piksel) sebelum gambar Mars selesai dimuat
-  var placeholder = new THREE.DataTexture(new Uint8Array([120, 70, 40, 255]), 1, 1, THREE.RGBAFormat);
+  // tekstur sementara (1 piksel) sebelum foto Mars selesai dimuat
+  var placeholder = new THREE.DataTexture(new Uint8Array([150, 80, 45, 255]), 1, 1, THREE.RGBAFormat);
   placeholder.needsUpdate = true;
 
   var sunWorld = new THREE.Vector3(-0.75, 0.35, 0.55).normalize();
@@ -228,25 +233,27 @@ void main() {
     uRim: { value: new THREE.Vector3(1, 0.42, 0.17) }
   };
 
-  /* ----- Memuat tekstur Mars ----- */
+  /* ----- Memuat foto Mars ----- */
   function loadMap(url) {
     var img = new Image();
     img.onload = function () {
       var maxW = mobile ? 2048 : 4096;
-      var w = Math.min(img.width, maxW);
-      var h = Math.round(img.height * (w / img.width));
+      var w = 1;
+      while (w * 2 <= Math.min(img.width, maxW)) w *= 2;
+      var h = Math.max(1, Math.round(w / 2));
       var c = document.createElement("canvas");
       c.width = w;
       c.height = h;
       c.getContext("2d").drawImage(img, 0, 0, w, h);
       var tex = new THREE.Texture(c);
-      tex.generateMipmaps = false;
       tex.minFilter = THREE.LinearFilter;
       tex.magFilter = THREE.LinearFilter;
+      tex.generateMipmaps = false;
       tex.needsUpdate = true;
       uniforms.uMap.value = tex;
       uniforms.uHasMap.value = 1;
     };
+    img.onerror = function () { /* tetap pakai permukaan prosedural */ };
     img.src = url;
   }
   loadMap(TEXTURE_URL);
@@ -279,7 +286,8 @@ void main() {
   else window.addEventListener("resize", resize);
 
   /* ----- Interaksi: seret, cubit, zoom ----- */
-  var rot = 0, vel = 0, tilt = 0.44, tiltBase = 0.44, tiltOff = 0;
+  var rot = 0, vel = 0;
+  var tilt = 0.44, tiltX = 0, tiltBase = 0.44, tiltOff = 0;
   var dragging = false, lastX = 0, lastY = 0, pinch = 0;
   var pts = {};
 
@@ -292,7 +300,67 @@ void main() {
     return Math.hypot(a.x - b.x, a.y - b.y) || 1;
   }
 
+  /* ----- Fokus ke lokasi (dari kartu di bagian Fakta) ----- */
+  var focusing = false, focusRot = 0, focusLat = 0, focusTimer = 0;
+
+  // ubah sudut target agar yang terdekat dengan posisi sekarang (supaya putaran tidak berbalik jauh)
+  function nearAngle(target, ref) {
+    var TAU = Math.PI * 2;
+    var d = ((target - ref) % TAU + TAU * 1.5) % TAU - Math.PI;
+    return ref + d;
+  }
+
+  function releaseFocus() {
+    if (!focusing) return;
+    focusing = false;
+    camDistT = DIST;
+    clearTimeout(focusTimer);
+  }
+
+  function focusOn(latDeg, lonDeg) {
+    var lat = latDeg * Math.PI / 180;
+    var lon = lonDeg * Math.PI / 180;
+    // posisi titik di permukaan, lalu sudut putar agar titik itu menghadap kamera
+    var a = Math.cos(lat) * Math.cos(lon);
+    var c = Math.cos(lat) * Math.sin(lon);
+    focusRot = nearAngle(Math.atan2(c, a) - Math.PI / 2, rot);
+    focusLat = lat;
+    focusing = true;
+    vel = 0;
+    camDistT = DIST_FOCUS;
+    clearTimeout(focusTimer);
+    focusTimer = setTimeout(releaseFocus, 9000);
+  }
+
+  // koordinat perkiraan untuk mengarahkan kamera (bukan data baru di halaman)
+  var LOC = {
+    "Olympus Mons": [18.65, -133.8],
+    "Valles Marineris": [-8.5, -68]
+  };
+  var st = document.createElement("style");
+  st.textContent =
+    ".loc-card{cursor:pointer;transition:border-color .4s ease,transform .4s ease}" +
+    ".loc-card:hover,.loc-card:focus-visible{border-color:rgba(255,106,43,.6);transform:translateY(-2px);outline:none}";
+  document.head.appendChild(st);
+
+  document.querySelectorAll("#menarik .card").forEach(function (card) {
+    var b = card.querySelector("b");
+    var name = b && b.textContent.trim();
+    if (!name || !LOC[name]) return;
+    card.classList.add("loc-card");
+    card.setAttribute("role", "button");
+    card.setAttribute("tabindex", "0");
+    card.setAttribute("aria-label", "Lihat " + name + " di planet");
+    var go = function () { focusOn(LOC[name][0], LOC[name][1]); };
+    card.addEventListener("click", go);
+    card.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); }
+    });
+  });
+
+  /* ----- Seret dan cubit ----- */
   cv.addEventListener("pointerdown", function (e) {
+    releaseFocus();
     pts[e.pointerId] = { x: e.clientX, y: e.clientY };
     try { cv.setPointerCapture(e.pointerId); } catch (err) {}
     if (count() === 1) { dragging = true; lastX = e.clientX; lastY = e.clientY; }
@@ -343,9 +411,15 @@ void main() {
     var el = document.getElementById(id);
     if (el) el.addEventListener("click", fn);
   }
-  bind("zin", function () { zoomBy(0.85); });
-  bind("zout", function () { zoomBy(1.18); });
-  bind("zreset", function () { camDistT = DIST; rot = 0; vel = 0; tiltOff = 0; });
+  bind("zin", function () { releaseFocus(); zoomBy(0.85); });
+  bind("zout", function () { releaseFocus(); zoomBy(1.18); });
+  bind("zreset", function () {
+    releaseFocus();
+    camDistT = DIST;
+    rot = 0;
+    vel = 0;
+    tiltOff = 0;
+  });
 
   // arah cahaya ikut gerakan mouse
   window.addEventListener("pointermove", function (e) {
@@ -363,26 +437,39 @@ void main() {
   api.nudge = function (amount) {
     vel = clamp(vel + amount, -0.05, 0.05);
   };
+  api.focusOn = focusOn;
 
   /* ----- Loop render ----- */
   var q = new THREE.Quaternion();
+  var running = true, rafId = 0;
   var last = performance.now(), t0 = last, ema = 1 / 60, frames = 0;
   var autoSpeed = reduce ? 0 : 0.05;
 
   function frame(now) {
-    requestAnimationFrame(frame);
+    if (!running) return;
+    rafId = requestAnimationFrame(frame);
     var dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     var t = (now - t0) / 1000;
 
-    if (!dragging) { rot += vel; vel *= 0.93; }
-    rot += autoSpeed * dt;
-    tilt += (tiltBase + tiltOff - tilt) * 0.05;
+    if (focusing) {
+      rot += (focusRot - rot) * 0.06;
+      vel = 0;
+    } else {
+      if (!dragging) { rot += vel; vel *= 0.93; }
+      rot += autoSpeed * dt;
+    }
+
+    // saat fokus, kemiringan dan lintang diatur agar lokasi tepat di tengah
+    var tiltZGoal = focusing ? 0 : tiltBase + tiltOff;
+    var tiltXGoal = focusing ? focusLat : 0;
+    tilt += (tiltZGoal - tilt) * 0.05;
+    tiltX += (tiltXGoal - tiltX) * 0.05;
     camDist += (camDistT - camDist) * 0.08;
     camera.position.set(0, 0, camDist);
 
     planet.rotation.y = rot;
-    tiltGroup.rotation.z = tilt;
+    tiltGroup.rotation.set(tiltX, 0, tilt);
     uniforms.uTime.value = t;
 
     // arah matahari di ruang objek (ikut putaran planet) dan di ruang kamera
@@ -402,8 +489,20 @@ void main() {
     }
   }
 
+  // hemat baterai: berhenti saat tab tidak dilihat
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) {
+      running = false;
+      cancelAnimationFrame(rafId);
+    } else if (!running) {
+      running = true;
+      last = performance.now();
+      rafId = requestAnimationFrame(frame);
+    }
+  });
+
   cv.addEventListener("webglcontextlost", function (e) { e.preventDefault(); fail(); });
 
   api.ok = true;
-  requestAnimationFrame(frame);
+  rafId = requestAnimationFrame(frame);
 })();
