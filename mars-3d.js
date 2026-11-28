@@ -124,7 +124,7 @@ void main() {
 
   // bayangan dari relief kecil (hanya di desktop)
   vec3 N = q;
-  if (uLow < 0.5) {
+  if (uLow < 0.5 && uHasMap < 0.5) {
     float e = 0.012;
     float h0 = H(q);
     vec3 g = vec3(H(q + vec3(e,0.0,0.0)) - h0, H(q + vec3(0.0,e,0.0)) - h0, H(q + vec3(0.0,0.0,e)) - h0) / e;
@@ -162,18 +162,21 @@ void main() {
   }
 
   // detail halus agar tetap tajam saat di-zoom
-  alb *= 0.94 + 0.12 * noise(q * 40.0);
+  if (uHasMap < 0.5) alb *= 0.94 + 0.12 * noise(q * 40.0);
 
   // pencahayaan dengan batas siang-malam yang lembut
-  float term = smoothstep(-0.12, 0.25, dot(q, sunO));
+  float term = smoothstep(-0.05, 0.22, dot(q, sunO));
   float dif = max(dot(N, sunO), 0.0) * term;
-  vec3 col = alb * (dif * vec3(1.0, 0.95, 0.88) * 1.3 + vec3(0.025, 0.014, 0.018));
+  vec3 col = alb * (dif * vec3(1.0, 0.95, 0.88) * 1.35 + vec3(0.012, 0.007, 0.01));
+  // redup di tepi planet, supaya terlihat seperti bola
+  float mu = max(dot(normalize(vN), normalize(vView)), 0.0);
+  col *= 0.4 + 0.6 * pow(mu, 0.45);
 
   // cahaya tipis atmosfer di tepi
   vec3 nV = normalize(vN);
   vec3 vV = normalize(vView);
   float fr = pow(max(1.0 - dot(nV, vV), 0.0), 3.0);
-  col += uRim * fr * 0.5 * (0.3 + 0.7 * max(dot(nV, uSunView), 0.0));
+  col += uRim * fr * 0.35 * (0.2 + 0.8 * max(dot(nV, uSunView), 0.0));
 
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -212,7 +215,7 @@ void main() {
   renderer.setPixelRatio(dpr);
   renderer.setClearColor(0x000000, 0);
 
-  var DIST = 4.6, DIST_MIN = 3.2, DIST_MAX = 7.0, DIST_FOCUS = 3.5;
+  var DIST = 5.0, DIST_MIN = 4.2, DIST_MAX = 8.0, DIST_FOCUS = 4.5;
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
   var camDist = DIST, camDistT = DIST;
@@ -238,9 +241,8 @@ void main() {
     var img = new Image();
     img.onload = function () {
       var maxW = mobile ? 2048 : 4096;
-      var w = 1;
-      while (w * 2 <= Math.min(img.width, maxW)) w *= 2;
-      var h = Math.max(1, Math.round(w / 2));
+      var w = Math.min(img.width, maxW);
+      var h = Math.max(1, Math.round(w * img.height / img.width));
       var c = document.createElement("canvas");
       c.width = w;
       c.height = h;
@@ -332,7 +334,7 @@ void main() {
     focusTimer = setTimeout(releaseFocus, 9000);
   }
 
-  // koordinat perkiraan untuk mengarahkan kamera (bukan data baru di halaman)
+  // koordinat dari teks kartu (sumber: NASA, sesuai bagian Fakta)
   var LOC = {
     "Olympus Mons": [18.65, -133.8],
     "Valles Marineris": [-8.5, -68]
